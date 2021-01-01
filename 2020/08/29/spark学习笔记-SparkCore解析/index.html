@@ -1,0 +1,512 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>spark学习笔记-SparkCore解析 | zxj</title><meta name="keywords" content="Spark"><meta name="author" content="Xiangjie"><meta name="copyright" content="Xiangjie"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="Spark 内核概述Spark内核泛指Spark的核心运行机制，包括Spark核心组件的运行机制、Spark任务调度机制、Spark内存管理机制、Spark核心功能的运行原理等，熟练掌握Spark内核原理，能够帮助我们更好地完成Spark代码设计，并能够帮助我们准确锁定项目运行过程中出现的问题的症结所在。 Spark核心组件回顾DriverSpark驱动器节点，用于执行Spark任务中的main方">
+<meta property="og:type" content="article">
+<meta property="og:title" content="spark学习笔记-SparkCore解析">
+<meta property="og:url" content="https://awslzhang.top/2020/08/29/spark%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-SparkCore%E8%A7%A3%E6%9E%90/index.html">
+<meta property="og:site_name" content="zxj">
+<meta property="og:description" content="Spark 内核概述Spark内核泛指Spark的核心运行机制，包括Spark核心组件的运行机制、Spark任务调度机制、Spark内存管理机制、Spark核心功能的运行原理等，熟练掌握Spark内核原理，能够帮助我们更好地完成Spark代码设计，并能够帮助我们准确锁定项目运行过程中出现的问题的症结所在。 Spark核心组件回顾DriverSpark驱动器节点，用于执行Spark任务中的main方">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://spark.apache.org/images/spark-logo-trademark.png">
+<meta property="article:published_time" content="2020-08-29T13:41:20.000Z">
+<meta property="article:modified_time" content="2021-01-01T05:50:00.043Z">
+<meta property="article:author" content="Xiangjie">
+<meta property="article:tag" content="Spark">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://spark.apache.org/images/spark-logo-trademark.png"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://awslzhang.top/2020/08/29/spark%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-SparkCore%E8%A7%A3%E6%9E%90/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: Xiangjie","link":"链接: ","source":"来源: zxj","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: {"chs_to_cht":"你已切换为繁体","cht_to_chs":"你已切换为简体","day_to_night":"你已切换为深色模式","night_to_day":"你已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#121212","position":"bottom-left"},
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: true,
+  isToc: true,
+  postUpdate: '2021-01-01 13:50:00'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.0.2"><link rel="alternate" href="/atom.xml" title="zxj" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://spark.apache.org/images/spark-logo-trademark.png)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">zxj</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">spark学习笔记-SparkCore解析</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-08-29T13:41:20.000Z" title="发表于 2020-08-29 21:41:20">2020-08-29</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-01-01T05:50:00.043Z" title="更新于 2021-01-01 13:50:00">2021-01-01</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Spark/">Spark</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">8.6k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>27分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="Spark-内核概述"><a href="#Spark-内核概述" class="headerlink" title="Spark 内核概述"></a>Spark 内核概述</h1><p>Spark内核泛指Spark的核心运行机制，包括<strong>Spark核心组件的运行机制、Spark任务调度机制、Spark内存管理机制、Spark核心功能的运行原理</strong>等，熟练掌握Spark内核原理，能够帮助我们更好地完成Spark代码设计，并能够帮助我们准确锁定项目运行过程中出现的问题的症结所在。</p>
+<h2 id="Spark核心组件回顾"><a href="#Spark核心组件回顾" class="headerlink" title="Spark核心组件回顾"></a>Spark核心组件回顾</h2><h3 id="Driver"><a href="#Driver" class="headerlink" title="Driver"></a>Driver</h3><p><strong>Spark驱动器节点</strong>，用于执行Spark任务中的<strong>main</strong>方法，负责实际代码的执行工作。Driver在Spark作业执行时主要负责：</p>
+<ol>
+<li>将用户程序转化为作业（job）；</li>
+<li>在Executor之间调度任务(task)；</li>
+<li>跟踪Executor的执行情况；</li>
+<li>通过UI展示查询运行情况；</li>
+</ol>
+<h3 id="Executor"><a href="#Executor" class="headerlink" title="Executor"></a>Executor</h3><p>Spark Executor节点是一个JVM进程，负责在 Spark 作业中运行具体任务，任务彼此之间相互独立。Spark 应用启动时，Executor节点被同时启动，并且始终伴随着整个 Spark 应用的生命周期而存在。如果有Executor节点发生了故障或崩溃，Spark 应用也可以继续执行，会将出错节点上的任务调度到其他Executor节点上继续运行。</p>
+<p>Executor有两个核心功能：</p>
+<ol>
+<li>负责<strong>运行组成Spark应用的任务</strong>，并将结果返回给驱动器进程；</li>
+<li>它们通过自身的块管理器（Block Manager）为用户程序中要求缓存的 RDD 提供内存式存储。<strong>RDD 是直接缓存在Executor进程内的</strong>，因此任务可以在运行时充分利用缓存数据加速运算。</li>
+</ol>
+<h2 id="Spark通用运行流程概述"><a href="#Spark通用运行流程概述" class="headerlink" title="Spark通用运行流程概述"></a>Spark通用运行流程概述</h2><p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830151813147.png" alt="image-20200830151813147"></p>
+<p>图1-1为Spark通用运行流程，<strong>不论Spark以何种模式进行部署，任务提交后，都会先启动Driver进程</strong>，随后Driver进程向集群管理器注册应用程序，之后集群管理器根据此任务的配置文件分配Executor并启动，当Driver所需的资源全部满足后，<strong>Driver开始执行main函数，Spark查询为懒执行，当执行到action算子时开始反向推算</strong>，<font color="red">根据宽依赖进行stage的划分，随后每一个stage对应一个taskset，taskset中有多个task，根据本地化原则，task会被分发到指定的Executor去执行</font>，在任务执行的过程中，Executor也会不断与Driver进行通信，报告任务运行情况。</p>
+<h1 id="Spark部署模式"><a href="#Spark部署模式" class="headerlink" title="Spark部署模式"></a>Spark部署模式</h1><p>Spark支持3种集群管理器（Cluster Manager），分别为：</p>
+<ol>
+<li><code>Standalone：</code>独立模式，Spark原生的简单集群管理器，自带完整的服务，可单独部署到一个集群中，<strong>无需依赖任何其他资源管理系统</strong>，使用Standalone可以很方便地搭建一个集群；</li>
+<li><code>Apache Mesos：</code>一个强大的分布式资源管理框架，它允许多种不同的框架部署在其上，包括yarn；</li>
+<li><code>Hadoop YARN：</code>统一的资源管理机制，在上面可以运行多套计算框架，如map reduce、storm等，<font color="red">根据driver在集群中的位置不同，分为yarn client和yarn cluster</font>。</li>
+</ol>
+<p>实际上，除了上述这些通用的集群管理器外，Spark内部也提供了一些方便用户测试和学习的简单集群部署模式。<font color="red"><strong>由于在实际工厂环境下使用的绝大多数的集群管理器是Hadoop YARN，因此我们关注的重点是Hadoop YARN模式下的Spark集群部署。</strong></font></p>
+<p>Spark的运行模式取决于传递给<code>SparkContext</code>的<font color="red"><code>MASTER</code>环境变量的值</font>，个别模式还需要辅助的程序接口来配合使用，目前支持的Master字符串及URL包括：</p>
+<table>
+<thead>
+<tr>
+<th><strong>Master URL</strong></th>
+<th><strong>Meaning</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>local</strong></td>
+<td>在本地运行，只有一个工作进程，无并行计算能力。</td>
+</tr>
+<tr>
+<td><strong>local[K]</strong></td>
+<td>在本地运行，有K个工作进程，通常设置K为机器的CPU核心数量。</td>
+</tr>
+<tr>
+<td><strong>local[*]</strong></td>
+<td>在本地运行，工作进程数量等于机器的CPU核心数量。</td>
+</tr>
+<tr>
+<td><strong>spark://HOST:PORT</strong></td>
+<td>以Standalone模式运行，这是Spark自身提供的集群运行模式，默认端口号: 7077。详细文档见:Spark  standalone cluster。</td>
+</tr>
+<tr>
+<td><strong>mesos://HOST:PORT</strong></td>
+<td>在Mesos集群上运行，Driver进程和Worker进程运行在Mesos集群上，部署模式必须使用固定值:–deploy-mode cluster。详细文档见:MesosClusterDispatcher.</td>
+</tr>
+<tr>
+<td><strong>yarn-client</strong></td>
+<td>在Yarn集群上运行，Driver进程在本地，Executor进程在Yarn集群上，部署模式必须使用固定值:–deploy-mode  client。Yarn集群地址必须在HADOOP_CONF_DIR or YARN_CONF_DIR变量里定义。</td>
+</tr>
+<tr>
+<td><strong>yarn-cluster</strong></td>
+<td>在Yarn集群上运行，Driver进程在Yarn集群上，Work进程也在Yarn集群上，部署模式必须使用固定值:–deploy-mode cluster。Yarn集群地址必须在HADOOP_CONF_DIR  or YARN_CONF_DIR变量里定义。</td>
+</tr>
+</tbody></table>
+<p><strong>用户在提交任务给Spark处理时，以下两个参数共同决定了Spark的运行方式。</strong></p>
+<ul>
+<li><code>master MASTER_URL</code> ：决定了Spark任务提交<font color="red">给哪种集群处理。</font></li>
+<li><code>deploy-mode DEPLOY_MODE</code>：决定了Driver的运行方式，<font color="red">可选值为Client或者Cluster。</font></li>
+</ul>
+<h2 id="Standalone模式运行机制"><a href="#Standalone模式运行机制" class="headerlink" title="Standalone模式运行机制"></a>Standalone模式运行机制</h2><p>Standalone集群有<strong>四个重要组成部分</strong>，分别是：</p>
+<ol>
+<li><code>Driver</code>：是一个进程，我们<strong>编写的Spark应用程序就运行在Driver上</strong>，由Driver进程执行；</li>
+<li><code>Master(RM)</code>：是一个进程，<strong>主要负责资源的调度和分配</strong>，并进行集群的监控等职责；</li>
+<li><code>Worker(NM)</code>：是一个进程，一个Worker运行在集群中的一台服务器上，主要负责两个职责，一个是用自己的内存存储RDD的某个或某些partition；另一个是启动其他进程和线程（Executor），对RDD上的partition进行并行的处理和计算。</li>
+<li><code>Executor</code>：是一个进程，一个Worker上可以运行多个Executor，Executor通过启动多个线程（task）来执行对RDD的partition进行并行计算，也就是执行我们对RDD定义的例如map、flatMap、reduce等算子操作。</li>
+</ol>
+<h3 id="Standalone-Client模式"><a href="#Standalone-Client模式" class="headerlink" title="Standalone Client模式"></a>Standalone Client模式</h3><p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830152737351.png" alt="image-20200830152737351"></p>
+<p>在Standalone Client模式下，<font color="red"><strong>Driver在任务提交的本地机器上运行</strong></font>：</p>
+<ol>
+<li>Driver启动会向Master注册应用程序</li>
+<li>Master根据submit脚本的资源需求找到内部资源至少可以启动一个Executor的所有Worker</li>
+<li>Worker之间分配Executor</li>
+<li>Executor开启完毕后向Driver反馈</li>
+<li><font color="red">Driver开始执行main函数，之后执行到Action算子时，开始划分stage，每个stage生成对应的taskSet，之后将task分发到各个Executor上执行。</font></li>
+</ol>
+<h3 id="Standalone-Cluster模式"><a href="#Standalone-Cluster模式" class="headerlink" title="Standalone Cluster模式"></a>Standalone Cluster模式</h3><p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830154509558.png" alt="image-20200830154509558"></p>
+<p>在Standalone Cluster模式下，<font color="red"><strong>任务提交后，Master会找到一个Worker启动Driver进程</strong></font></p>
+<ol>
+<li>Driver启动会向Master注册应用程序</li>
+<li>Master根据submit脚本的资源需求找到内部资源至少可以启动一个Executor的所有Worker</li>
+<li>Worker之间分配Executor</li>
+<li>Executor开启完毕后向Driver反馈</li>
+<li><font color="red">Driver开始执行main函数，之后执行到Action算子时，开始划分stage，每个stage生成对应的taskSet，之后将task分发到各个Executor上执行。</font></li>
+</ol>
+<h2 id="Yarn模式运行机制🔺"><a href="#Yarn模式运行机制🔺" class="headerlink" title="Yarn模式运行机制🔺"></a>Yarn模式运行机制🔺</h2><h3 id="YARN-Client模式"><a href="#YARN-Client模式" class="headerlink" title="YARN Client模式"></a>YARN Client模式</h3><p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830155921502.png" alt="image-20200830155921502"></p>
+<p>在YARN Client模式下，<font color="red"><strong>Driver在任务提交的本地机器上运行</strong></font></p>
+<ol>
+<li>Driver启动后会和ResourceManager通讯申请启动ApplicationMaster</li>
+<li>ResourceManager分配container，在合适的NodeManager上启动ApplicationMaster</li>
+<li>ApplicationMaster的功能相当于一个<font color="red"><code>ExecutorLaucher</code></font>，只负责向ResourceManager申请Executor内存。</li>
+<li>ResourceManager接到ApplicationMaster的资源申请后会分配container，然后ApplicationMaster在资源分配指定的NodeManager上启动Executor进程</li>
+<li><font color="red">Executor进程启动后会向Driver反向注册</font></li>
+<li>Driver开始执行main函数，之后执行到Action算子时，触发一个job，并根据宽依赖开始划分stage，每个stage生成对应的taskSet，之后将task分发到各个Executor上执行。</li>
+</ol>
+<h3 id="YARN-Cluster模式🔺"><a href="#YARN-Cluster模式🔺" class="headerlink" title="YARN Cluster模式🔺"></a>YARN Cluster模式🔺</h3><p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830160157808.png" alt="image-20200830160157808"></p>
+<p>在YARN Cluster模式下，<font color="red"><strong>任务提交后会和ResourceManager通讯申请启动ApplicationMaster</strong></font></p>
+<ol>
+<li>随后ResourceManager分配container，在合适的NodeManager上启动ApplicationMaster，此时的ApplicationMaster就是Driver。</li>
+<li>Driver启动后向ResourceManager申请Executor内存</li>
+<li>ResourceManager接到ApplicationMaster的资源申请后会分配container，然后在合适的NodeManager上启动Executor进程</li>
+<li>Executor进程启动后会向Driver反向注册</li>
+<li>Driver开始执行main函数，之后执行到Action算子时，触发一个job，并根据宽依赖开始划分stage，每个stage生成对应的taskSet，之后将task分发到各个Executor上执行。</li>
+</ol>
+<h1 id="YARN-Cluster模式源代码解读🔺🔺"><a href="#YARN-Cluster模式源代码解读🔺🔺" class="headerlink" title="YARN Cluster模式源代码解读🔺🔺"></a>YARN Cluster模式源代码解读🔺🔺</h1><h2 id="Spark-Submit"><a href="#Spark-Submit" class="headerlink" title="Spark Submit"></a>Spark Submit</h2><p><strong>1. YARN Cluster的计算由命令开始：</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">bin/spark-submit \</span><br><span class="line">--class org.apache.spark.examples.SparkPi \</span><br><span class="line">--executor-memory 1G \</span><br><span class="line">--total-executor-cores 2 \</span><br><span class="line">-- master MASTER_URL yarn\</span><br><span class="line">-- deploy-mode cluster \</span><br><span class="line">./examples/jars/spark-examples_2.11-2.1.1.jar \</span><br><span class="line">100</span><br></pre></td></tr></table></figure>
+
+<p><em>调用命令的本质就是启动了SparkSubmit的进程，通过Java命令：</em></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830162407076.png" alt="image-20200830162407076"></p>
+<p><font color="red"><em>所以，当执行后，此节点会立马开启了一个进程：<code>SparkSubmit</code></em></font></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830162517111.png" alt="image-20200830162517111"></p>
+<h3 id="SparkSubmitArguments参数封装"><a href="#SparkSubmitArguments参数封装" class="headerlink" title="SparkSubmitArguments参数封装"></a>SparkSubmitArguments参数封装</h3><p>因为<code>SparkSubmit</code>是通过<code>java xxx</code>命令执行的，所以我们需要直接查看它的main方法：</p>
+<p>图中圈出的部分是代码的参数验证，它限制了部署模式必须是<code>client</code>、<code>cluster</code>的一种</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830163439950.png" alt="image-20200830163439950"></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830163544480.png" alt="image-20200830163544480"></p>
+<h3 id="submit提交"><a href="#submit提交" class="headerlink" title="submit提交"></a>submit提交</h3><p>之后参数验证完毕后，根据提交状态，我们可以确定它执行了<code>case SparkSubmitAction.SUBMIT =&gt; submit(appArgs)</code></p>
+<p>submit函数中分别调用了：</p>
+<ul>
+<li><code>prepareSubmitEnvironment</code></li>
+<li><code>doRunMain</code></li>
+</ul>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830164234921.png" alt="image-20200830164234921"></p>
+<h4 id="prepareSubmitEnvironment提交环境准备"><a href="#prepareSubmitEnvironment提交环境准备" class="headerlink" title="prepareSubmitEnvironment提交环境准备"></a>prepareSubmitEnvironment提交环境准备</h4><p>在<code>prepareSubmitEnvironment</code>方法的源代码中我们找到了关键部分</p>
+<p>发现<code>prepareSubmitEnvironment</code>的返回值<code>childMainClass</code>被赋值为了<font color="red">**<code>org.apache.spark.deploy.yarn.Client</code>**</font></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830164713753.png" alt="image-20200830164713753"></p>
+<h4 id="doRunMain"><a href="#doRunMain" class="headerlink" title="doRunMain"></a>doRunMain</h4><p>在运行<code>doRunMain</code>方法内部时将<code>prepareSubmitEnvironment</code>方法的返回值<code>childMainClass</code>传入了新方法<code>runMain</code>，此时它的值是**<code>org.apache.spark.deploy.yarn.Client</code>**</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830165235145.png" alt="image-20200830165235145"></p>
+<h5 id="runMain"><a href="#runMain" class="headerlink" title="runMain"></a>runMain</h5><p>发现此方法对传入的<code>childMainClass</code>即：**<code>org.apache.spark.deploy.yarn.Client</code><strong>进行了返回获取实体类，<font color="red">**并且判断它的main方法，并调用！！！</strong></font></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830165939807.png" alt="image-20200830165939807"></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830170053716.png" alt="image-20200830170053716"></p>
+<h2 id="Client"><a href="#Client" class="headerlink" title="Client"></a>Client</h2><p>上面说到Spark Submit的main方法里面以反射调用了<code>org.apache.spark.deploy.yarn.Client</code>的main方法，下面开始查看<code>org.apache.spark.deploy.yarn.Client</code>的main方法。</p>
+<p>发现：</p>
+<ol>
+<li>执行了参数封装</li>
+<li>开启线程执行Client的逻辑，注意这里不是以java命令执行的，所以不会开启进程，而是以线程方式执行的，只会开启一个线程。</li>
+</ol>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830170750827.png" alt="image-20200830170750827"></p>
+<h3 id="ClientArguments"><a href="#ClientArguments" class="headerlink" title="ClientArguments"></a>ClientArguments</h3><p>参数封装时，对我们最开始sparksubmit时指定的class进行了封装</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830170956395.png" alt="image-20200830170956395"></p>
+<h3 id="run"><a href="#run" class="headerlink" title="run"></a>run</h3><p><code>new Client(args, sparkConf).run()</code>，以线程的方式运行了Client线程的逻辑。</p>
+<p>上面可以分为两种逻辑：</p>
+<ol>
+<li>new Client</li>
+<li>client.run</li>
+</ol>
+<h4 id="new-Client"><a href="#new-Client" class="headerlink" title="new Client"></a>new Client</h4><p>查看它的构造方法，发现它创建了对象<code>private val yarnClient = YarnClient.createYarnClient</code></p>
+<p>再次查看对象<code>YarnClient</code>的内容，发现它有RM，ResourceManager的地址。</p>
+<p><font color="red"><strong>所以，Client类可以通过对象<code>yarnClient </code>来与<code>ResourceManager</code>进行交互。</strong></font></p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">protected</span> <span class="type">ApplicationClientProtocol</span> rmClient;</span><br><span class="line">  <span class="keyword">protected</span> <span class="type">InetSocketAddress</span> rmAddress;</span><br></pre></td></tr></table></figure>
+
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830171947757.png" alt="image-20200830171947757"></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830172001381.png" alt="image-20200830172001381"></p>
+<h4 id="client-run"><a href="#client-run" class="headerlink" title="client.run"></a><strong>client.run</strong></h4><p>发现方法<code>submitApplication</code>返回了appId，appId是Yarn中的概念，是一个唯一ID，每个执行任务唯一的对应一个。<font color="red">所以<code>submitApplication</code>是一个与Yarn交互并获取到appId的方法。</font></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830172804937.png" alt="image-20200830172804937"></p>
+<p>例如，以下以spark-shell的yarn client模式运行的就有appId。</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830173010937.png" alt="image-20200830173010937"></p>
+<h5 id="submitApplication🔺"><a href="#submitApplication🔺" class="headerlink" title="submitApplication🔺"></a>submitApplication🔺</h5><p>[上述的yarnClient](#new Client)是一个保存着RM地址的对象，它在submitApplication方法中开始对RM进行了连接。</p>
+<ol>
+<li>同时向RM进行了资源的申请，通过RM的反馈<code>newAppResponse</code>得到了Yarn的唯一id</li>
+<li>构建应用AM的指令</li>
+<li>申请RM执行应用！！！</li>
+</ol>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830173429640.png" alt="image-20200830173429640"></p>
+<h6 id="createContainerLaunchContext🔺"><a href="#createContainerLaunchContext🔺" class="headerlink" title="createContainerLaunchContext🔺"></a>createContainerLaunchContext🔺</h6><p><font color="red"><strong>AM执行封装指令，command</strong></font></p>
+<p>此方法是<code>logInfo(&quot;Setting up container launch context for our AM&quot;)</code>，启动context for our AM的指令内容。</p>
+<p>发现：</p>
+<ol>
+<li>cluster模式构建的Java命令启动的是<code>org.apache.spark.deploy.yarn.ApplicationMaster</code></li>
+<li>client模式构建的Java命令启动的是<code>org.apache.spark.deploy.yarn.ExecutorLauncher</code></li>
+</ol>
+<p><font color="red"><strong>注意：因为是以Java命令通知RM启动的，RM会寻找一个NM来通过Java命令启动，所以以<code>ApplicationMaster</code>为例，它启动的应该是进程。</strong></font></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830174128613.png" alt="image-20200830174128613"></p>
+<p>例如，以下以spark-shell的yarn client模式运行的启动的是<code>ExecutorLauncher</code>。</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830174427258.png" alt="image-20200830174427258"></p>
+<h2 id="ApplicationMaster🔺"><a href="#ApplicationMaster🔺" class="headerlink" title="ApplicationMaster🔺"></a>ApplicationMaster🔺</h2><p><font color="red"><strong>ApplicationMaster是以进程启动的</strong></font></p>
+<p>上面得知，通过java命令的方法开启了一台NM执行AM，所以下面查看AM的main：</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830180331230.png" alt="image-20200830180331230"></p>
+<h3 id="master-run"><a href="#master-run" class="headerlink" title="master.run"></a>master.run</h3><p>此方法中的关键点：在AM中运行</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830180521026.png" alt="image-20200830180521026"></p>
+<h4 id="runDriver"><a href="#runDriver" class="headerlink" title="runDriver"></a>runDriver</h4><p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830180708534.png" alt="image-20200830180708534"></p>
+<h5 id="startUserApplication：启动Driver类的main"><a href="#startUserApplication：启动Driver类的main" class="headerlink" title="startUserApplication：启动Driver类的main"></a>startUserApplication：启动Driver类的main</h5><p>此方法是启动Driver类，也就是我们自己编写的带有<code>sparkContext</code>的类，同时也是最开始spark-submit提交时class的参数的类。</p>
+<ol>
+<li>通过一直传递的参数，开始获取我们编写的类</li>
+<li>获取到类后，通过反射获取到main函数</li>
+<li>然后通过反射调用main函数</li>
+</ol>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830180856820.png" alt="image-20200830180856820"></p>
+<h5 id="registerAM"><a href="#registerAM" class="headerlink" title="registerAM"></a>registerAM</h5><p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830182105200.png" alt="image-20200830182105200"></p>
+<h6 id="allocateResources"><a href="#allocateResources" class="headerlink" title="allocateResources"></a>allocateResources</h6><p>RM向AM申请资源：</p>
+<p>由上面可知amClient是存储了AM地址的对象，由此对象连接AM获取可分配的资源</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830182245257.png" alt="image-20200830182245257"></p>
+<h6 id="handleAllocatedContainers分配开启容器"><a href="#handleAllocatedContainers分配开启容器" class="headerlink" title="handleAllocatedContainers分配开启容器"></a>handleAllocatedContainers分配开启容器</h6><p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830182438026.png" alt="image-20200830182438026"></p>
+<h6 id="runAllocatedContainers"><a href="#runAllocatedContainers" class="headerlink" title="runAllocatedContainers"></a>runAllocatedContainers</h6><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Launches executors in the allocated containers.</span><br></pre></td></tr></table></figure>
+
+<p>在每个分配的容器中启动执行程序。看到启动了一个ExecutorRunnable的线程在线程池里。</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830182553599.png" alt="image-20200830182553599"></p>
+<h6 id="ExecutorRunnable"><a href="#ExecutorRunnable" class="headerlink" title="ExecutorRunnable"></a>ExecutorRunnable</h6><p>看到此线程的逻辑就是通过<code>nmClient</code>连接NM节点开始<code>container</code></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830182659297.png" alt="image-20200830182659297"></p>
+<p><font color="red"><strong>那么，是如何开启Container容器呢</strong></font></p>
+<h6 id="startContainer🔺"><a href="#startContainer🔺" class="headerlink" title="startContainer🔺"></a>startContainer🔺</h6><p>发现此方法中又调用了方法<code>val commands = prepareCommand()</code>来<font color="red">生成Java命令行命令来开启<code>org.apache.spark.executor.CoarseGrainedExecutorBackend</code></font></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830183133066.png" alt="image-20200830183133066"></p>
+<p><font color="red"><strong>所以Container容器中开启了<code>CoarseGrainedExecutorBackend</code>，它是来计算任务的，即Executor的后台。</strong></font></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830183322800.png" alt="image-20200830183322800"></p>
+<h2 id="CoarseGrainedExecutorBackend"><a href="#CoarseGrainedExecutorBackend" class="headerlink" title="CoarseGrainedExecutorBackend"></a>CoarseGrainedExecutorBackend</h2><p><font color="red"><strong>CoarseGrainedExecutorBackend是以进程启动的</strong></font></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830183429858.png" alt="image-20200830183429858"></p>
+<h3 id="run-1"><a href="#run-1" class="headerlink" title="run"></a>run</h3><p>发现它新建了一个计算<strong>终端</strong>环境，通过查看它的类时：<code>CoarseGrainedExecutorBackend</code></p>
+<p>发现了新的属性<code>var executor: Executor = null</code>，这时发现此对象才是计算的根本！！。</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830183711553.png" alt="image-20200830183711553"></p>
+<p>发现它继承了<code>ThreadSafeRpcEndpoint</code>，而<code>ThreadSafeRpcEndpoint</code>终端有四个生命周期：</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830183921529.png" alt="image-20200830183921529"></p>
+<p>因为CoarseGrainedExecutorBackend继承了它，所以他也是个终端，且CoarseGrainedExecutorBackend开启后会执行onStart中定义的事情：在Container的CoarseGrainedExecutorBackend创建完毕后会向Driver所在的终端发送Executor启动完毕的信息</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830184011123.png" alt="image-20200830184011123"></p>
+<p>而我们Driver的收到信息后，会反馈给CoarseGrainedExecutorBackend，CoarseGrainedExecutorBackend收到信息后执行以下内容，创建计算对象，上面讲到CoarseGrainedExecutorBackend并不是一个计算对象，有着计算作用的是它的属性<code>executor</code>，这时创建<code>executor</code>属性</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830184231615.png" alt="image-20200830184231615"></p>
+<p>以上资源调度完事，Executor已经启动</p>
+<h2 id="总结🔺"><a href="#总结🔺" class="headerlink" title="总结🔺"></a>总结🔺</h2><p>上面的源码已经完全的解释了下图：</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830185102697.png" alt="image-20200830185102697"></p>
+<p>由源码的流程可看出共启动了以下几种进程：</p>
+<ol>
+<li>spark-submit：发布任务的客户端启动</li>
+<li>ApplicationMaster：RM随机找一台NM启动</li>
+<li>CoarseGrainedExecutorBackend：AM申请到的NM中的Container中启动，此进程中的CoarseGrainedExecutorBackend对象的Executor属性才是计算的属性</li>
+</ol>
+<hr>
+<h1 id="Spark-任务调度机制"><a href="#Spark-任务调度机制" class="headerlink" title="Spark 任务调度机制"></a>Spark 任务调度机制</h1><p>在工厂环境下，Spark集群的部署方式一般为YARN-Cluster模式，之后的内核分析内容中我们默认集群的部署方式为YARN-Cluster模式。</p>
+<h2 id="Spark任务提交流程"><a href="#Spark任务提交流程" class="headerlink" title="Spark任务提交流程"></a>Spark任务提交流程</h2><p>在上一章中我们讲解了Spark YARN-Cluster模式下的任务提交流程</p>
+<p>下面的时序图清晰地说明了一个Spark应用程序从提交到运行的完整流程：</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830185555274.png" alt="image-20200830185555274"></p>
+<p>提交一个Spark应用程序，首先通过Client向ResourceManager请求启动一个Application，同时检查是否有足够的资源满足Application的需求，如果资源条件满足，则准备ApplicationMaster的启动上下文，交给ResourceManager，并循环监控Application状态。</p>
+<p>当提交的资源队列中有资源时，ResourceManager会在某个NodeManager上启动ApplicationMaster进程，<font color="red">ApplicationMaster会单独启动Driver后台线程，当Driver启动后，ApplicationMaster会通过本地的RPC连接Driver</font>，并开始向ResourceManager申请Container资源运行Executor进程（一个Executor对应与一个Container），当ResourceManager返回Container资源，ApplicationMaster则在对应的Container上启动Executor。</p>
+<p>Driver线程主要是初始化SparkContext对象，准备运行所需的上下文，然后一方面保持与ApplicationMaster的RPC连接，通过ApplicationMaster申请资源，另一方面根据用户业务逻辑开始调度任务，将任务下发到已有的空闲Executor上。</p>
+<p>当ResourceManager向ApplicationMaster返回Container资源时，ApplicationMaster就尝试在对应的Container上启动Executor进程，<font color="red">Executor进程起来后，会向Driver反向注册，注册成功后保持与Driver的心跳，同时等待Driver分发任务，当分发的任务执行完毕后，将任务状态上报给Driver。</font></p>
+<p>从上述时序图可知，Client只负责提交Application并监控Application的状态。对于Spark的任务调度主要是集中在两个方面: <strong>资源申请和任务分发</strong>，其主要是通过ApplicationMaster、Driver以及Executor之间来完成。</p>
+<h2 id="Spark任务调度概述🔺"><a href="#Spark任务调度概述🔺" class="headerlink" title="Spark任务调度概述🔺"></a>Spark任务调度概述🔺</h2><p>当Driver起来后，Driver则会根据用户程序逻辑准备任务，并根据Executor资源情况逐步分发任务。在详细阐述任务调度前，首先说明下Spark里的几个概念。一个Spark应用程序包括Job、Stage以及Task三个概念：</p>
+<ul>
+<li> Job是以Action方法为界，遇到一个Action方法则触发一个Job；</li>
+<li>Stage是Job的子集，以RDD宽依赖(即Shuffle)为界，遇到Shuffle做一次划分；</li>
+<li> Task是Stage的子集，以并行度(分区数)来衡量，分区数是多少，则有多少个task。</li>
+</ul>
+<p>Spark的任务调度总体来说分两路进行，<font color="red"><strong>一路是Stage级的调度，一路是Task级的调度</strong></font>，总体调度流程如下图所示：</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830190028855.png" alt="image-20200830190028855"></p>
+<p>Spark RDD通过其Transactions操作，形成了RDD血缘关系图，即DAG，最后通过Action的调用，触发Job并调度执行。</p>
+<p><font color="red"><strong>DAGScheduler负责Stage级的调度</strong></font>，主要是将job切分成若干Stages，并将每个Stage打包成TaskSet交给TaskScheduler调度。</p>
+<p><font color="red"><strong>TaskScheduler负责Task级的调度</strong></font>，将DAGScheduler给过来的TaskSet按照指定的调度策略分发到Executor上执行，调度过程中SchedulerBackend负责提供可用资源，其中<strong>SchedulerBackend有多种实现，分别对接不同的资源管理系统</strong>。</p>
+<p>下面这张图描述了Spark-On-Yarn模式下在任务调度期间，ApplicationMaster、Driver以及Executor内部模块的交互过程：</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830190229195.png" alt="image-20200830190229195"></p>
+<h2 id="Spark-Stage级调度🔺"><a href="#Spark-Stage级调度🔺" class="headerlink" title="Spark Stage级调度🔺"></a>Spark Stage级调度🔺</h2><p>Spark的任务调度是从DAG切割开始，主要是由DAGScheduler来完成。当遇到一个Action操作后就会触发一个Job的计算，并交给DAGScheduler来提交，下图是涉及到Job提交的相关方法调用流程图。</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830190303628.png" alt="image-20200830190303628"></p>
+<p><font color="red">**<code>dag.submit</code>**提交stage时先提交第一个Stage，在Stage切分阶段除了最后一个Stage叫<code>ResultStage</code>只进行Shuffle Read，其余Stage均称为<code>ShuffleMapStage</code>均进行Shuffle Read和Write，除了第一个不进行Read</font></p>
+<p>Job由最终的RDD和Action方法封装而成，SparkContext将Job交给DAGScheduler提交，它会根据RDD的血缘关系构成的DAG进行切分，将一个Job划分为若干Stages，<font color="red">具体划分策略是，由最终的RDD不断通过依赖回溯判断父依赖是否是宽依赖，即以Shuffle为界，划分Stage，窄依赖的RDD之间被划分到同一个Stage中，可以进行pipeline式的计算</font></p>
+<p>如图紫色流程部分。划分的Stages分两类，一类叫做ResultStage，<strong>为DAG最下游的Stage</strong>，由Action方法决定，<strong>另一类叫做ShuffleMapStage，为下游Stage准备数据</strong>，下面看一个简单的例子WordCount。</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830190837690.png" alt="image-20200830190837690"></p>
+<p>Job由saveAsTextFile触发，该Job由RDD-3和saveAsTextFile方法组成，根据RDD之间的依赖关系从RDD-3开始回溯搜索，直到没有依赖的RDD-0，<strong>在回溯搜索过程中，RDD-3依赖RDD-2，并且是宽依赖</strong>，所以在RDD-2和RDD-3之间划分Stage，RDD-3被划到最后一个Stage，即ResultStage中，RDD-2依赖RDD-1，RDD-1依赖RDD-0，这些依赖都是窄依赖，所以将RDD-0、RDD-1和RDD-2划分到同一个Stage<strong>，即ShuffleMapStage中，实际执行的时候，数据记录会一气呵成地执行RDD-0到RDD-2的转化</strong>。不难看出，其本质上是一个深度优先搜索算法。</p>
+<p><font color="red">一个Stage是否被提交，需要判断它的父Stage是否执行，只有在父Stage执行完毕才能提交当前Stage，如果一个Stage没有父Stage，那么从该Stage开始提交。Stage提交时会将Task信息（分区信息以及方法等）序列化并被打包成TaskSet交给TaskScheduler</font>，一个Partition对应一个Task，另一方面TaskScheduler会监控Stage的运行状态，只有Executor丢失或者Task由于Fetch失败才需要重新提交失败的Stage以调度运行失败的任务，其他类型的Task失败会在TaskScheduler的调度过程中重试。</p>
+<p>相对来说DAGScheduler做的事情较为简单，仅仅是在Stage层面上划分DAG，提交Stage并监控相关状态信息。TaskScheduler则相对较为复杂，下面详细阐述其细节。</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>DAGScheduler就是对整个Job进行了Stage的切分，并对每个Stage的多个Task封装为TaskSet交给TaskScheduler。</p>
+<p>DAGScheduler在提交Stage时，从第一个往后提交，因为每个Stage之间都存在Shuffle，需要上个Stage的Shuffle Wrtire的数据</p>
+<h2 id="Spark-Task级调度"><a href="#Spark-Task级调度" class="headerlink" title="Spark Task级调度"></a>Spark Task级调度</h2><p>Spark Task的调度是由TaskScheduler来完成，由前文可知，DAGScheduler将Stage打包到TaskSet交给TaskScheduler，TaskScheduler会将TaskSet封装为TaskSetManager到调度队列中，TaskSetManager结构如下图所示。</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830191254343.png" alt="image-20200830191254343"></p>
+<p><font color="red"><strong>TaskSetManager负责监控管理同一个Stage中的Tasks，TaskScheduler就是以TaskSetManager为单元来调度任务。</strong></font></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830191444090.png" alt="image-20200830191444090"></p>
+<p>前面也提到，<font color="red">TaskScheduler初始化后会启动SchedulerBackend，它负责跟外界打交道，接收Executor的注册信息，并维护Executor的状态</font>，所以说SchedulerBackend是管“获取任务”的，同时它在启动后会定期地去“询问”TaskScheduler有没有任务要运行，TaskScheduler在SchedulerBackend“问”它的时候，会从调度队列中按照指定的调度策略选择TaskSetManager去调度运行，大致方法调用流程如下图所示：</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830191635299.png" alt="image-20200830191635299"></p>
+<p>SchedulerBackEnd收到待执行的任务后从TaskSetPool，开始联系Executor开始执行</p>
+<h3 id="调度策略"><a href="#调度策略" class="headerlink" title="调度策略"></a>调度策略</h3><p>前面讲到，TaskScheduler会先把DAGScheduler给过来的TaskSet封装成TaskSetManager扔到任务队列里，然后再从任务队列里按照一定的规则把它们取出来在SchedulerBackend给过来的Executor上运行。<font color="red">这个调度过程实际上还是比较粗粒度的，是面向TaskSetManager的</font></p>
+<p>TaskScheduler是以树的方式来管理任务队列，树中的节点类型为Schdulable，叶子节点为TaskSetManager，非叶子节点为Pool，下图是它们之间的继承关系。</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200830192011398.png" alt="image-20200830192011398"></p>
+<p>TaskScheduler支持两种调度策略，<strong>一种是FIFO，也是默认的调度策略，另一种是FAIR</strong>。在TaskScheduler初始化过程中会实例化rootPool，表示树的根节点，是Pool类型。</p>
+<h3 id="失败重试和黑名单"><a href="#失败重试和黑名单" class="headerlink" title="失败重试和黑名单"></a>失败重试和黑名单</h3><p>除了选择合适的Task调度运行外，还需要监控Task的执行状态，前面也提到，与外部打交道的是<code>SchedulerBackend</code>，Task被提交到Executor启动执行后，Executor会将执行状态上报给SchedulerBackend，SchedulerBackend则告诉TaskScheduler，TaskScheduler找到该Task对应的TaskSetManager，并通知到该TaskSetManager，这样TaskSetManager就知道Task的失败与成功状态，<font color="red">对于失败的Task，会记录它失败的次数，如果失败次数还没有超过最大重试次数，那么就把它放回待调度的Task池子中，否则整个Application失败。</font></p>
+<p><font color="red">在记录Task失败次数过程中，会记录它上一次失败所在的Executor Id和Host，这样下次再调度这个Task时，会使用黑名单机制，避免它被调度到上一次失败的节点上，起到一定的容错作用。</font>黑名单记录Task上一次失败所在的Executor Id和Host，以及其对应的“拉黑”时间，“拉黑”时间是指这段时间内不要再往这个节点上调度这个Task了。</p>
+<h1 id="Spark-Shuffle解析"><a href="#Spark-Shuffle解析" class="headerlink" title="Spark Shuffle解析"></a>Spark Shuffle解析</h1><h2 id="Shuffle要点"><a href="#Shuffle要点" class="headerlink" title="Shuffle要点"></a>Shuffle要点</h2><h3 id="ShuffleMapStage与ResultStage"><a href="#ShuffleMapStage与ResultStage" class="headerlink" title="ShuffleMapStage与ResultStage"></a>ShuffleMapStage与ResultStage</h3><p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200831205831081.png" alt="image-20200831205831081"></p>
+<p>在划分stage时，最后一个stage称为finalStage，它本质上是一个ResultStage对象，前面的所有stage被称为ShuffleMapStage。</p>
+<p>ShuffleMapStage的结束伴随着shuffle文件的写磁盘。除了第一个ShuffleMapStage，剩余的也都会读读盘。</p>
+<p>ResultStage基本上对应代码中的action算子，即将一个函数应用在RDD的各个partition的数据集上，意味着一个job的运行结束。</p>
+<h3 id="Shuffle中任务个数"><a href="#Shuffle中任务个数" class="headerlink" title="Shuffle中任务个数"></a>Shuffle中任务个数</h3><p>我们知道，Spark Shuffle分为map阶段和reduce阶段，或者称之为<code>ShuffleRead</code>阶段和<code>ShuffleWrite</code>阶段，那么对于一次Shuffle，map过程和reduce过程都会由若干个task来执行，那么map task和reduce task的数量是如何确定的呢？</p>
+<p>假设Spark任务从HDFS中读取数据，<font color="red">那么初始RDD分区个数由该文件的split个数决定</font>，也就是一个split对应生成的RDD的一个partition，我们假设初始partition个数为N。</p>
+<p>初始RDD经过一系列算子计算后（<strong>假设没有执行repartition和coalesce算子进行重分区</strong>，则分区个数不变，仍为N，如果经过重分区算子，那么分区个数变为M），我们假设分区个数不变，<font color="red">当执行到Shuffle操作时，map端的task个数和partition个数一致，即map task为N个。</font></p>
+<p><font color="red"><strong>reduce端的stage默认取spark.default.parallelism这个配置项的值作为分区数，如果没有配置，则以map端的最后一个RDD的分区数作为其分区数（也就是N），那么分区数就决定了reduce端的task的个数。</strong></font></p>
+<h3 id="Reduce端数据的读取"><a href="#Reduce端数据的读取" class="headerlink" title="Reduce端数据的读取"></a>Reduce端数据的读取</h3><p>根据stage的划分我们知道，map端task和reduce端task不在相同的stage中，map task位于ShuffleMapStage，reduce task位于ResultStage，map task会先执行，那么后执行的reduce task如何知道从哪里去拉取map task落盘后的数据呢？</p>
+<p>reduce端的数据拉取过程如下：</p>
+<ol>
+<li>map task 执行完毕后会将计算状态以及磁盘小文件位置等信息封装到MapStatus对象中，然后由本进程中的MapOutPutTrackerWorker对象将mapStatus对象发送给Driver进程的MapOutPutTrackerMaster对象；</li>
+<li>在reduce task开始执行之前会先让本进程中的MapOutputTrackerWorker向Driver进程中的MapoutPutTrakcerMaster发动请求，请求磁盘小文件位置信息；</li>
+<li> 当所有的Map task执行完毕后，Driver进程中的MapOutPutTrackerMaster就掌握了所有的磁盘小文件的位置信息。此时MapOutPutTrackerMaster会告诉MapOutPutTrackerWorker磁盘小文件的位置信息；</li>
+<li>完成之前的操作之后，由BlockTransforService去Executor0所在的节点拉数据，默认会启动五个子线程。每次拉取的数据量不能超过48M（reduce task每次最多拉取48M数据，将拉来的数据存储到Executor内存的20%内存中）。</li>
+</ol>
+<h2 id="HashShuffle"><a href="#HashShuffle" class="headerlink" title="HashShuffle"></a>HashShuffle</h2><p>以下的讨论都假设每个Executor有1个CPU core。</p>
+<h3 id="未经优化的HashShuffleManager"><a href="#未经优化的HashShuffleManager" class="headerlink" title="未经优化的HashShuffleManager"></a>未经优化的HashShuffleManager</h3><p>默认shuffle前后分区是不变的，所以没有优化后的HashShuffleManager每个Task任务都会生成n个文件，n是分区数，但是这样生成的文件太多，效率太慢</p>
+<p>shuffle write阶段，主要就是在一个stage结束计算之后，为了下一个stage可以执行shuffle类的算子（比如reduceByKey），而将每个task处理的数据按key进行“划分”。<font color="red">所谓“划分”，就是对相同的key执行hash算法，从而将相同key都写入同一个磁盘文件中，而每一个磁盘文件都只属于下游stage的一个task。</font>在将数据写入磁盘之前，会先将数据写入内存缓冲中，当内存缓冲填满之后，才会溢写到磁盘文件中去。</p>
+<p><font color="red"><strong>下一个stage的task有多少个，当前stage的每个task就要创建多少份磁盘文件。</strong></font>比如下一个stage总共有100个task，那么当前stage的每个task都要创建100份磁盘文件。如果当前stage有50个task，总共有10个Executor，每个Executor执行5个task，那么每个Executor上总共就要创建500个磁盘文件，所有Executor上会创建5000个磁盘文件。由此可见，未经优化的shuffle write操作所产生的磁盘文件的数量是极其惊人的。</p>
+<p>shuffle read阶段，通常就是一个stage刚开始时要做的事情。<font color="red">此时该stage的每一个task就需要将上一个stage的计算结果中的所有相同key，从各个节点上通过网络都拉取到自己所在的节点上，然后进行key的聚合或连接等操作。</font>由于shuffle write的过程中，map task给下游stage的每个reduce task都创建了一个磁盘文件，因此shuffle read的过程中，每个reduce task只要从上游stage的所有map task所在节点上，拉取属于自己的那一个磁盘文件即可。</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200831213230836.png" alt="image-20200831213230836"></p>
+<h3 id="优化后的HashShuffleManager"><a href="#优化后的HashShuffleManager" class="headerlink" title="优化后的HashShuffleManager"></a>优化后的HashShuffleManager</h3><p>为了优化HashShuffleManager我们可以设置一个参数，spark.shuffle. consolidateFiles，该参数默认值为false，将其设置为true即可开启优化机制，通常来说，如果我们使用HashShuffleManager，那么都建议开启这个选项。</p>
+<p>开启consolidate机制之后，在shuffle write过程中，task就不是为下游stage的每个task创建一个磁盘文件了，此时会出现<strong>shuffleFileGroup</strong>的概念，<font color="red">每个shuffleFileGroup会对应一批磁盘文件，磁盘文件的数量与下游stage的task数量是相同的。</font>一个Executor上有多少个CPU core，就可以并行执行多少个task。而第一批并行执行的每个task都会创建一个shuffleFileGroup，并将数据写入对应的磁盘文件内。</p>
+<p>当Executor的CPU core执行完一批task，<font color="red">接着执行下一批task时，下一批task就会复用之前已有的shuffleFileGroup，包括其中的磁盘文件，</font>也就是说，此时task会将数据写入已有的磁盘文件中，而不会写入新的磁盘文件中。因此，consolidate机制允许不同的task复用同一批磁盘文件，这样就可以有效将多个task的磁盘文件进行一定程度上的合并，从而大幅度减少磁盘文件的数量，进而提升shuffle write的性能。</p>
+<p>也就是Executor的每个核core会创建n个文件，n是下个stage的并行度。</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200831213702651.png" alt="image-20200831213702651"></p>
+<h2 id="SortShuffle解析🔺"><a href="#SortShuffle解析🔺" class="headerlink" title="SortShuffle解析🔺"></a>SortShuffle解析🔺</h2><p>SortShuffleManager的运行机制主要分成两种，<strong>一种是普通运行机制，另一种是bypass运行机制。</strong><font color="red">当shuffle read task的数量小于等于spark.shuffle.sort. bypassMergeThreshold参数的值时（默认为200），就会启用bypass机制。</font></p>
+<h3 id="普通运行机制"><a href="#普通运行机制" class="headerlink" title="普通运行机制"></a>普通运行机制</h3><p>在该模式下，<font color="red">数据会先写入一个内存数据结构中，</font>此时根据不同的shuffle算子，可能选用不同的数据结构。<strong>如果是reduceByKey这种聚合类的shuffle算子，那么会选用Map数据结构</strong>，一边通过Map进行聚合，一边写入内存；<strong>如果是join这种普通的shuffle算子，那么会选用Array数据结构</strong>，直接写入内存。接着，每写一条数据进入内存数据结构之后，就会判断一下，是否达到了某个临界阈值。<strong>如果达到临界阈值的话，那么就会尝试将内存数据结构中的数据溢写到磁盘，然后清空内存数据结构。</strong></p>
+<p><font color="red">在溢写到磁盘文件之前，会先根据key对内存数据结构中已有的数据进行排序。排序过后，会分批将数据写入磁盘文件。</font>默认的batch数量是10000条，也就是说，排序好的数据，会以每批1万条数据的形式分批写入磁盘文件。写入磁盘文件是通过Java的BufferedOutputStream实现的。BufferedOutputStream是Java的缓冲输出流，首先会将数据缓冲在内存中，当内存缓冲满溢之后再一次写入磁盘文件中，这样可以减少磁盘IO次数，提升性能。</p>
+<p><font color="red">一个task将所有数据写入内存数据结构的过程中，会发生多次磁盘溢写操作，也就会产生多个临时文件。最后会将之前所有的临时磁盘文件都进行合并，这就是merge过程，此时会将之前所有临时磁盘文件中的数据读取出来，然后依次写入最终的磁盘文件之中。</font>此外，由于一个task就只对应一个磁盘文件，<strong>也就意味着该task为下游stage的task准备的数据都在这一个文件中，因此还会单独写一份索引文件</strong>，其中标识了下游各个task的数据在文件中的start offset与end offset。</p>
+<p>这与Kafka中的Partition的索引文件、日志文件思想类似，通过索引来使文件读取加快</p>
+<p>普通运行机制的SortShuffleManager工作原理如图所示：</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200831214716757.png" alt="image-20200831214716757"></p>
+<p><font color="red">*<em>总结来说，有几个并行任务就有几个文件，相对于优化后的HashShuffleManager，它是有几个核心，既有几个核心</em>并行度（主要取决于并行度）的文件。**</font></p>
+<h3 id="ByPass机制"><a href="#ByPass机制" class="headerlink" title="ByPass机制"></a>ByPass机制</h3><p>bypass运行机制的触发条件如下：</p>
+<ul>
+<li>shuffle map task数量小于spark.shuffle.sort.bypassMergeThreshold参数的值。</li>
+<li>不是聚合类的shuffle算子。</li>
+</ul>
+<p>此时，每个task会为每个下游task都创建一个临时磁盘文件，并将数据按key进行hash然后根据key的hash值，将key写入对应的磁盘文件之中。当然，写入磁盘文件时也是先写入内存缓冲，缓冲写满之后再溢写到磁盘文件的。最后，同样会将所有临时磁盘文件都合并成一个磁盘文件，并创建一个单独的索引文件。</p>
+<p><font color="red">该过程的磁盘写机制其实跟未经优化的HashShuffleManager是一模一样的，因为都要创建数量惊人的磁盘文件，只是在最后会做一个磁盘文件的合并而已。</font>因此少量的最终磁盘文件，也让该机制相对未经优化的HashShuffleManager来说，shuffle read的性能会更好。</p>
+<p>而该机制与普通SortShuffleManager运行机制的不同在于：</p>
+<ol>
+<li>第一，<strong>磁盘写机制不同；</strong></li>
+<li>第二，<strong>不会进行排序。也就是说，启用该机制的最大好处在于，shuffle write过程中，不需要进行数据的排序操作，也就节省掉了这部分的性能开销。</strong></li>
+</ol>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200831214852355.png" alt="image-20200831214852355"></p>
+<h1 id="Spark内存管理"><a href="#Spark内存管理" class="headerlink" title="Spark内存管理"></a>Spark内存管理</h1><p>在执行Spark 的应用程序时，Spark 集群会启动 Driver 和 Executor 两种 JVM 进程，前者为主控进程，负责创建 Spark 上下文，提交 Spark 作业（Job），并将作业转化为计算任务（Task），在各个 Executor 进程间协调任务的调度，后者负责在工作节点上执行具体的计算任务，并将结果返回给 Driver，同时为需要持久化的 RDD 提供存储功能。由于 Driver 的内存管理相对来说较为简单，本节主要对 Executor 的内存管理进行分析，下文中的 Spark 内存均特指 Executor 的内存。</p>
+<h2 id="内存空间分配"><a href="#内存空间分配" class="headerlink" title="内存空间分配"></a>内存空间分配</h2><h3 id="统一内存管理"><a href="#统一内存管理" class="headerlink" title="统一内存管理"></a>统一内存管理</h3><p>Spark 1.6 之后引入的统一内存管理机制，存储内存和执行内存共享同一块空间，可以动态占用对方的空闲区域，统一内存管理的堆内内存结构如图所示：</p>
+<p><strong>堆外内存</strong></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200831215139324.png" alt="image-20200831215139324"></p>
+<p><strong>堆内内存</strong></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200831215144277.png" alt="image-20200831215144277"></p>
+<ul>
+<li>storage：存储RDD缓存</li>
+<li>Executor：进行计算需要的内存</li>
+<li>Other：用户自定义的数据结构和未缓存的RDD</li>
+</ul>
+<p><font color="red">其中最重要的优化在于动态占用机制，其规则如下：</font></p>
+<ol>
+<li>   设定基本的存储内存和执行内存区域（spark.storage.storageFraction 参数），该设定确定了双方各自拥有的空间的范围；</li>
+<li>   双方的空间都不足时，则存储到硬盘；若己方空间不足而对方空余时，可借用对方的空间;（存储空间不足是指不足以放下一个完整的 Block）</li>
+<li>   <strong>执行内存的空间被对方占用后，可让对方将占用的部分转存到硬盘，然后”归还”借用的空间；</strong></li>
+<li>   <strong>存储内存的空间被对方占用后，无法让对方”归还”，因为需要考虑 Shuffle 过程中的很多因素，实现起来较为复杂。</strong></li>
+</ol>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200831215719557.png" alt="image-20200831215719557"></p>
+<p><font color="red"></font></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">Xiangjie</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://awslzhang.top/2020/08/29/spark%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-SparkCore%E8%A7%A3%E6%9E%90/">https://awslzhang.top/2020/08/29/spark%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-SparkCore%E8%A7%A3%E6%9E%90/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://awslzhang.top" target="_blank">zxj</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Spark/">Spark</a></div><div class="post_share"><div class="social-share" data-image="https://spark.apache.org/images/spark-logo-trademark.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2020/09/21/IDEA%E6%89%93%E5%8C%85%E8%84%9A%E6%9C%AC%E9%97%AE%E9%A2%98/"><img class="prev-cover" src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/idea.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">IDEA打包脚本问题</div></div></a></div><div class="next-post pull-right"><a href="/2020/08/26/spark%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0-SparkStreaming/"><img class="next-cover" src="https://spark.apache.org/images/spark-logo-trademark.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">spark学习笔记-SparkStreaming</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2020/08/23/spark学习笔记-广播变量及累加器/" title="spark学习笔记-广播变量及累加器"><img class="cover" src="https://spark.apache.org/images/spark-logo-trademark.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-08-23</div><div class="title">spark学习笔记-广播变量及累加器</div></div></a></div><div><a href="/2020/08/24/spark学习笔记-SparkSQL/" title="spark学习笔记-SparkSQL"><img class="cover" src="https://spark.apache.org/images/spark-logo-trademark.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-08-24</div><div class="title">spark学习笔记-SparkSQL</div></div></a></div><div><a href="/2020/08/26/spark学习笔记-SparkStreaming/" title="spark学习笔记-SparkStreaming"><img class="cover" src="https://spark.apache.org/images/spark-logo-trademark.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-08-26</div><div class="title">spark学习笔记-SparkStreaming</div></div></a></div><div><a href="/2020/08/19/spark学习笔记-简单了解/" title="spark学习笔记-简单了解"><img class="cover" src="https://spark.apache.org/images/spark-logo-trademark.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-08-19</div><div class="title">spark学习笔记-简单了解</div></div></a></div><div><a href="/2020/08/22/spark学习笔记-RDD/" title="spark学习笔记-RDD"><img class="cover" src="https://spark.apache.org/images/spark-logo-trademark.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-08-22</div><div class="title">spark学习笔记-RDD</div></div></a></div></div></div></div><div class="aside_content" id="aside_content"><div class="card-widget card-info"><div class="card-content"><div class="card-info-avatar is-center"><img class="avatar-img" src="/null" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">Xiangjie</div><div class="author-info__description"></div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/XiangJie-Zhang" target="_blank" title="Github"><i class="fab fa-github"></i></a><a class="social-icon" href="mailto:qluzxj@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a></div></div></div><div class="card-widget card-announcement"><div class="card-content"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Spark-%E5%86%85%E6%A0%B8%E6%A6%82%E8%BF%B0"><span class="toc-number">1.</span> <span class="toc-text">Spark 内核概述</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Spark%E6%A0%B8%E5%BF%83%E7%BB%84%E4%BB%B6%E5%9B%9E%E9%A1%BE"><span class="toc-number">1.1.</span> <span class="toc-text">Spark核心组件回顾</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Driver"><span class="toc-number">1.1.1.</span> <span class="toc-text">Driver</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Executor"><span class="toc-number">1.1.2.</span> <span class="toc-text">Executor</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Spark%E9%80%9A%E7%94%A8%E8%BF%90%E8%A1%8C%E6%B5%81%E7%A8%8B%E6%A6%82%E8%BF%B0"><span class="toc-number">1.2.</span> <span class="toc-text">Spark通用运行流程概述</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Spark%E9%83%A8%E7%BD%B2%E6%A8%A1%E5%BC%8F"><span class="toc-number">2.</span> <span class="toc-text">Spark部署模式</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Standalone%E6%A8%A1%E5%BC%8F%E8%BF%90%E8%A1%8C%E6%9C%BA%E5%88%B6"><span class="toc-number">2.1.</span> <span class="toc-text">Standalone模式运行机制</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Standalone-Client%E6%A8%A1%E5%BC%8F"><span class="toc-number">2.1.1.</span> <span class="toc-text">Standalone Client模式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Standalone-Cluster%E6%A8%A1%E5%BC%8F"><span class="toc-number">2.1.2.</span> <span class="toc-text">Standalone Cluster模式</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Yarn%E6%A8%A1%E5%BC%8F%E8%BF%90%E8%A1%8C%E6%9C%BA%E5%88%B6%F0%9F%94%BA"><span class="toc-number">2.2.</span> <span class="toc-text">Yarn模式运行机制🔺</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#YARN-Client%E6%A8%A1%E5%BC%8F"><span class="toc-number">2.2.1.</span> <span class="toc-text">YARN Client模式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#YARN-Cluster%E6%A8%A1%E5%BC%8F%F0%9F%94%BA"><span class="toc-number">2.2.2.</span> <span class="toc-text">YARN Cluster模式🔺</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#YARN-Cluster%E6%A8%A1%E5%BC%8F%E6%BA%90%E4%BB%A3%E7%A0%81%E8%A7%A3%E8%AF%BB%F0%9F%94%BA%F0%9F%94%BA"><span class="toc-number">3.</span> <span class="toc-text">YARN Cluster模式源代码解读🔺🔺</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Spark-Submit"><span class="toc-number">3.1.</span> <span class="toc-text">Spark Submit</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#SparkSubmitArguments%E5%8F%82%E6%95%B0%E5%B0%81%E8%A3%85"><span class="toc-number">3.1.1.</span> <span class="toc-text">SparkSubmitArguments参数封装</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#submit%E6%8F%90%E4%BA%A4"><span class="toc-number">3.1.2.</span> <span class="toc-text">submit提交</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#prepareSubmitEnvironment%E6%8F%90%E4%BA%A4%E7%8E%AF%E5%A2%83%E5%87%86%E5%A4%87"><span class="toc-number">3.1.2.1.</span> <span class="toc-text">prepareSubmitEnvironment提交环境准备</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#doRunMain"><span class="toc-number">3.1.2.2.</span> <span class="toc-text">doRunMain</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#runMain"><span class="toc-number">3.1.2.2.1.</span> <span class="toc-text">runMain</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Client"><span class="toc-number">3.2.</span> <span class="toc-text">Client</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#ClientArguments"><span class="toc-number">3.2.1.</span> <span class="toc-text">ClientArguments</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#run"><span class="toc-number">3.2.2.</span> <span class="toc-text">run</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#new-Client"><span class="toc-number">3.2.2.1.</span> <span class="toc-text">new Client</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#client-run"><span class="toc-number">3.2.2.2.</span> <span class="toc-text">client.run</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#submitApplication%F0%9F%94%BA"><span class="toc-number">3.2.2.2.1.</span> <span class="toc-text">submitApplication🔺</span></a><ol class="toc-child"><li class="toc-item toc-level-6"><a class="toc-link" href="#createContainerLaunchContext%F0%9F%94%BA"><span class="toc-number">3.2.2.2.1.1.</span> <span class="toc-text">createContainerLaunchContext🔺</span></a></li></ol></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ApplicationMaster%F0%9F%94%BA"><span class="toc-number">3.3.</span> <span class="toc-text">ApplicationMaster🔺</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#master-run"><span class="toc-number">3.3.1.</span> <span class="toc-text">master.run</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#runDriver"><span class="toc-number">3.3.1.1.</span> <span class="toc-text">runDriver</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#startUserApplication%EF%BC%9A%E5%90%AF%E5%8A%A8Driver%E7%B1%BB%E7%9A%84main"><span class="toc-number">3.3.1.1.1.</span> <span class="toc-text">startUserApplication：启动Driver类的main</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#registerAM"><span class="toc-number">3.3.1.1.2.</span> <span class="toc-text">registerAM</span></a><ol class="toc-child"><li class="toc-item toc-level-6"><a class="toc-link" href="#allocateResources"><span class="toc-number">3.3.1.1.2.1.</span> <span class="toc-text">allocateResources</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#handleAllocatedContainers%E5%88%86%E9%85%8D%E5%BC%80%E5%90%AF%E5%AE%B9%E5%99%A8"><span class="toc-number">3.3.1.1.2.2.</span> <span class="toc-text">handleAllocatedContainers分配开启容器</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#runAllocatedContainers"><span class="toc-number">3.3.1.1.2.3.</span> <span class="toc-text">runAllocatedContainers</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#ExecutorRunnable"><span class="toc-number">3.3.1.1.2.4.</span> <span class="toc-text">ExecutorRunnable</span></a></li><li class="toc-item toc-level-6"><a class="toc-link" href="#startContainer%F0%9F%94%BA"><span class="toc-number">3.3.1.1.2.5.</span> <span class="toc-text">startContainer🔺</span></a></li></ol></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#CoarseGrainedExecutorBackend"><span class="toc-number">3.4.</span> <span class="toc-text">CoarseGrainedExecutorBackend</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#run-1"><span class="toc-number">3.4.1.</span> <span class="toc-text">run</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93%F0%9F%94%BA"><span class="toc-number">3.5.</span> <span class="toc-text">总结🔺</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Spark-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6%E6%9C%BA%E5%88%B6"><span class="toc-number">4.</span> <span class="toc-text">Spark 任务调度机制</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Spark%E4%BB%BB%E5%8A%A1%E6%8F%90%E4%BA%A4%E6%B5%81%E7%A8%8B"><span class="toc-number">4.1.</span> <span class="toc-text">Spark任务提交流程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Spark%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6%E6%A6%82%E8%BF%B0%F0%9F%94%BA"><span class="toc-number">4.2.</span> <span class="toc-text">Spark任务调度概述🔺</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Spark-Stage%E7%BA%A7%E8%B0%83%E5%BA%A6%F0%9F%94%BA"><span class="toc-number">4.3.</span> <span class="toc-text">Spark Stage级调度🔺</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">4.3.1.</span> <span class="toc-text">总结</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Spark-Task%E7%BA%A7%E8%B0%83%E5%BA%A6"><span class="toc-number">4.4.</span> <span class="toc-text">Spark Task级调度</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%B0%83%E5%BA%A6%E7%AD%96%E7%95%A5"><span class="toc-number">4.4.1.</span> <span class="toc-text">调度策略</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%A4%B1%E8%B4%A5%E9%87%8D%E8%AF%95%E5%92%8C%E9%BB%91%E5%90%8D%E5%8D%95"><span class="toc-number">4.4.2.</span> <span class="toc-text">失败重试和黑名单</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Spark-Shuffle%E8%A7%A3%E6%9E%90"><span class="toc-number">5.</span> <span class="toc-text">Spark Shuffle解析</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Shuffle%E8%A6%81%E7%82%B9"><span class="toc-number">5.1.</span> <span class="toc-text">Shuffle要点</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#ShuffleMapStage%E4%B8%8EResultStage"><span class="toc-number">5.1.1.</span> <span class="toc-text">ShuffleMapStage与ResultStage</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Shuffle%E4%B8%AD%E4%BB%BB%E5%8A%A1%E4%B8%AA%E6%95%B0"><span class="toc-number">5.1.2.</span> <span class="toc-text">Shuffle中任务个数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Reduce%E7%AB%AF%E6%95%B0%E6%8D%AE%E7%9A%84%E8%AF%BB%E5%8F%96"><span class="toc-number">5.1.3.</span> <span class="toc-text">Reduce端数据的读取</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#HashShuffle"><span class="toc-number">5.2.</span> <span class="toc-text">HashShuffle</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9C%AA%E7%BB%8F%E4%BC%98%E5%8C%96%E7%9A%84HashShuffleManager"><span class="toc-number">5.2.1.</span> <span class="toc-text">未经优化的HashShuffleManager</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BC%98%E5%8C%96%E5%90%8E%E7%9A%84HashShuffleManager"><span class="toc-number">5.2.2.</span> <span class="toc-text">优化后的HashShuffleManager</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#SortShuffle%E8%A7%A3%E6%9E%90%F0%9F%94%BA"><span class="toc-number">5.3.</span> <span class="toc-text">SortShuffle解析🔺</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%99%AE%E9%80%9A%E8%BF%90%E8%A1%8C%E6%9C%BA%E5%88%B6"><span class="toc-number">5.3.1.</span> <span class="toc-text">普通运行机制</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ByPass%E6%9C%BA%E5%88%B6"><span class="toc-number">5.3.2.</span> <span class="toc-text">ByPass机制</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Spark%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86"><span class="toc-number">6.</span> <span class="toc-text">Spark内存管理</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%85%E5%AD%98%E7%A9%BA%E9%97%B4%E5%88%86%E9%85%8D"><span class="toc-number">6.1.</span> <span class="toc-text">内存空间分配</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BB%9F%E4%B8%80%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86"><span class="toc-number">6.1.1.</span> <span class="toc-text">统一内存管理</span></a></li></ol></li></ol></li></ol></div></div></div><div class="card-widget card-recent-post"><div class="card-content"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink的时间语义和watermark"/></a><div class="content"><a class="title" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark">Flink的时间语义和watermark</a><time datetime="2020-12-23T10:59:07.000Z" title="发表于 2020-12-23 18:59:07">2020-12-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/Flink-API/" title="Flink Api学习"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Api学习"/></a><div class="content"><a class="title" href="/2020/12/17/Flink-API/" title="Flink Api学习">Flink Api学习</a><time datetime="2020-12-17T12:36:28.000Z" title="发表于 2020-12-17 20:36:28">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/ready/" title="ready!"><img src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="ready!"/></a><div class="content"><a class="title" href="/2020/12/17/ready/" title="ready!">ready!</a><time datetime="2020-12-16T16:02:06.000Z" title="发表于 2020-12-17 00:02:06">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink学习笔记"/></a><div class="content"><a class="title" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记">Flink学习笔记</a><time datetime="2020-12-16T12:29:56.000Z" title="发表于 2020-12-16 20:29:56">2020-12-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目"><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/下载.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="k8s集群监控、高可用以及部署自建Java项目"/></a><div class="content"><a class="title" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目">k8s集群监控、高可用以及部署自建Java项目</a><time datetime="2020-12-06T01:26:41.000Z" title="发表于 2020-12-06 09:26:41">2020-12-06</time></div></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By Xiangjie</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><canvas class="fireworks" mobile="false"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script></div></body></html>

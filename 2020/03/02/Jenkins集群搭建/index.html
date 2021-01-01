@@ -1,0 +1,227 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jenkins集群搭建 | zxj</title><meta name="keywords" content="Jenkins,HA"><meta name="author" content="Xiangjie"><meta name="copyright" content="Xiangjie"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="前言Jenkins是当下比较流行的一款功能强大的持续集成工具，它支持搭建集群，来提高多项目的构建速度，模式为主从模式，master会将任务分配到各个从节点进行并发构建，从而提高速度，下面介绍一下如何搭建Jenkins集群。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Jenkins集群搭建">
+<meta property="og:url" content="https://awslzhang.top/2020/03/02/Jenkins%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA/index.html">
+<meta property="og:site_name" content="zxj">
+<meta property="og:description" content="前言Jenkins是当下比较流行的一款功能强大的持续集成工具，它支持搭建集群，来提高多项目的构建速度，模式为主从模式，master会将任务分配到各个从节点进行并发构建，从而提高速度，下面介绍一下如何搭建Jenkins集群。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg">
+<meta property="article:published_time" content="2020-03-02T01:14:51.000Z">
+<meta property="article:modified_time" content="2021-01-01T05:49:59.952Z">
+<meta property="article:author" content="Xiangjie">
+<meta property="article:tag" content="Jenkins">
+<meta property="article:tag" content="HA">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://awslzhang.top/2020/03/02/Jenkins%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: Xiangjie","link":"链接: ","source":"来源: zxj","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: {"chs_to_cht":"你已切换为繁体","cht_to_chs":"你已切换为简体","day_to_night":"你已切换为深色模式","night_to_day":"你已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#121212","position":"bottom-left"},
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: true,
+  isToc: true,
+  postUpdate: '2021-01-01 13:49:59'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.0.2"><link rel="alternate" href="/atom.xml" title="zxj" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">zxj</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Jenkins集群搭建</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-03-02T01:14:51.000Z" title="发表于 2020-03-02 09:14:51">2020-03-02</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-01-01T05:49:59.952Z" title="更新于 2021-01-01 13:49:59">2021-01-01</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/DevOps/">DevOps</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">910</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>3分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Jenkins是当下比较流行的一款功能强大的持续集成工具，它支持搭建集群，来提高多项目的构建速度，模式为主从模式，master会将任务分配到各个从节点进行并发构建，从而提高速度，下面介绍一下如何搭建Jenkins集群。</p>
+<a id="more"></a>
+
+<h1 id="环境介绍"><a href="#环境介绍" class="headerlink" title="环境介绍"></a>环境介绍</h1><p>搭建slave节点，不需要安装Jenkins，只需要安装构建项目的环境变量即可（Java、maven）</p>
+<p>两台服务器,一台作为master，一台作为slave，设A为master，设B为slave。</p>
+<p>A已经搭建好，现在开始搭建B</p>
+<p>Jenkins的安装教程：</p>
+<a href="/2020/01/16/Jenkins%E8%87%AA%E5%8A%A8%E6%8C%81%E7%BB%AD%E5%8C%96%E5%AE%9E%E8%B7%B5/" title="点击这里查看这篇文章">点击这里查看这篇文章</a>
+
+<h1 id="环境准备"><a href="#环境准备" class="headerlink" title="环境准备"></a>环境准备</h1><h2 id="ssh连接"><a href="#ssh连接" class="headerlink" title="ssh连接"></a>ssh连接</h2><p>首先确保master节点能通过ssh免密登陆slave节点</p>
+<p>这里的A节点是按照<a href="/2020/01/16/Jenkins%E8%87%AA%E5%8A%A8%E6%8C%81%E7%BB%AD%E5%8C%96%E5%AE%9E%E8%B7%B5/" title="这篇文章">这篇文章</a>的手动安装的，一定要看以下。</p>
+<p><strong>A节点执行</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh-keygen -t rsa -C <span class="string">&quot;jenkins&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p><img src="1.PNG"></p>
+<p><strong>B节点执行</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">useradd -d /var/lib/jenkins jenkins</span><br><span class="line">passwd jenkins</span><br></pre></td></tr></table></figure>
+
+<p>记住密码</p>
+<p><strong>A节点执行</strong></p>
+<p>A节点发送给B节点公钥</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh-copy-id -i ~/.ssh/id_rsa.pub jenkins@192.168.174.133</span><br></pre></td></tr></table></figure>
+
+<p>验证成功：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh jenkins@192.168.174.133</span><br></pre></td></tr></table></figure>
+
+<h1 id="配置"><a href="#配置" class="headerlink" title="配置"></a>配置</h1><p>启动master的Jenkins开始配置从节点</p>
+<h2 id="添加新节点"><a href="#添加新节点" class="headerlink" title="添加新节点"></a>添加新节点</h2><p>打开Jenkins -&gt; 系统管理 -&gt; 管理节点 -&gt; 新建节点</p>
+<p><img src="2.PNG"></p>
+<p><img src="3.PNG"></p>
+<h2 id="设置连接"><a href="#设置连接" class="headerlink" title="设置连接"></a>设置连接</h2><p><img src="4.PNG"></p>
+<p><img src="5.PNG"></p>
+<p>工作目录我写的是<code>/var/lib/jenkins</code>，<font color='red'>一定要保证有权限</font>。</p>
+<p>结点名称：随意填</p>
+<p>描述：随意填</p>
+<p>并发构建数：同时进行构建的最大数量，我这里设置为2</p>
+<p>工作目录：从节点上的jenkins工作目录，权限要给足。</p>
+<p>标签：随意填，我们将项目关联到节点时，可以根据标签来。</p>
+<p>用法：选择“尽可能的使用这个节点”，相当于设置结点优先级。</p>
+<p>启动方式：“Launch slave agent via SSH”，使用SSH由master连接到slave来执行任务</p>
+<p>主机：slave的ip</p>
+<p>Credentials：见后文</p>
+<p>Host Key Verification Strategy ：Manually trusted key Verification Strategy </p>
+<p>Require manual verification of initial connection ：选中</p>
+<p>可用性：尽量保持在线</p>
+<p>工具位置：不设置</p>
+<p>环境变量：不设置</p>
+<h1 id="连接"><a href="#连接" class="headerlink" title="连接"></a>连接</h1><p>由于上面我们使用了“Manually Trusted Key Verification Strategy”策略，所以，这里我们需要手动验证一下从节点的身份。</p>
+<p>点击我们刚刚新建的从节点 -&gt; 点击【Trust SSH Host Key】,点击【是】： </p>
+<p><img src="6.PNG"></p>
+<p>但是我却出现了一下错误(意思是权限被拒绝)：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">SSHLauncher&#123;host=<span class="string">&#x27;192.168.174.133&#x27;</span>, port=22, credentialsId=<span class="string">&#x27;test2&#x27;</span>, jvmOptions=<span class="string">&#x27;&#x27;</span>, javaPath=<span class="string">&#x27;&#x27;</span>, prefixStartSlaveCmd=<span class="string">&#x27;&#x27;</span>, suffixStartSlaveCmd=<span class="string">&#x27;&#x27;</span>, launchTimeoutSeconds=210, maxNumRetries=10, retryWaitTime=15, sshHostKeyVerificationStrategy=hudson.plugins.sshslaves.verifiers.ManuallyTrustedKeyVerificationStrategy, tcpNoDelay=<span class="literal">true</span>, trackCredentials=<span class="literal">true</span>&#125;</span><br><span class="line">[03/02/20 10:30:21] [SSH] Opening SSH connection to 192.168.174.133:22.</span><br><span class="line">[03/02/20 10:30:21] [SSH] SSH host key matches key seen previously <span class="keyword">for</span> this host. Connection will be allowed.</span><br><span class="line">ERROR: Server rejected the 1 private key(s) <span class="keyword">for</span> test2 (credentialId:test2/method:publickey)</span><br><span class="line">ERROR: Failed to authenticate as test2 with credential=test2</span><br><span class="line">java.io.IOException: Publickey authentication failed.</span><br><span class="line">    at com.trilead.ssh2.auth.AuthenticationManager.authenticatePublicKey(AuthenticationManager.java:302)</span><br><span class="line">    at com.trilead.ssh2.Connection.authenticateWithPublicKey(Connection.java:451)</span><br><span class="line">    at com.cloudbees.jenkins.plugins.sshcredentials.impl.TrileadSSHPublicKeyAuthenticator.doAuthenticate(TrileadSSHPublicKeyAuthenticator.java:109)</span><br><span class="line">    at com.cloudbees.jenkins.plugins.sshcredentials.SSHAuthenticator.authenticate(SSHAuthenticator.java:436)</span><br><span class="line">    at com.cloudbees.jenkins.plugins.sshcredentials.SSHAuthenticator.authenticate(SSHAuthenticator.java:473)</span><br><span class="line">    at hudson.plugins.sshslaves.SSHLauncher.openConnection(SSHLauncher.java:861)</span><br><span class="line">    at hudson.plugins.sshslaves.SSHLauncher<span class="variable">$1</span>.call(SSHLauncher.java:425)</span><br><span class="line">    at hudson.plugins.sshslaves.SSHLauncher<span class="variable">$1</span>.call(SSHLauncher.java:412)</span><br><span class="line">    at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)</span><br><span class="line">    at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)</span><br><span class="line">    at java.base/java.util.concurrent.ThreadPoolExecutor<span class="variable">$Worker</span>.run(ThreadPoolExecutor.java:628)</span><br><span class="line">    at java.base/java.lang.Thread.run(Thread.java:834)</span><br><span class="line">Caused by: java.io.IOException: PEM problem: it is of unknown <span class="built_in">type</span></span><br><span class="line">    at com.trilead.ssh2.crypto.PEMDecoder.decodeKeyPair(PEMDecoder.java:500)</span><br><span class="line">    at com.trilead.ssh2.auth.AuthenticationManager.authenticatePublicKey(AuthenticationManager.java:236)</span><br><span class="line">    ... 11 more</span><br><span class="line">[03/02/20 10:30:21] [SSH] Authentication failed.</span><br><span class="line">Authentication failed.</span><br><span class="line">[03/02/20 10:30:21] Launch failed - cleaning up connection</span><br><span class="line">[03/02/20 10:30:21] [SSH] Connection closed.</span><br></pre></td></tr></table></figure>
+
+<p><strong>解决办法</strong></p>
+<p>请一定要按照<a href="#ssh%E8%BF%9E%E6%8E%A5">上述来写ssh连接</a></p>
+<p>成功</p>
+<p><img src="7.PNG"></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">Xiangjie</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://awslzhang.top/2020/03/02/Jenkins%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA/">https://awslzhang.top/2020/03/02/Jenkins%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://awslzhang.top" target="_blank">zxj</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Jenkins/">Jenkins</a><a class="post-meta__tags" href="/tags/HA/">HA</a></div><div class="post_share"><div class="social-share" data-image="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2020/03/03/%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%E4%B9%8BDubbo/"><img class="prev-cover" src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">微服务架构解决方案之Dubbo</div></div></a></div><div class="next-post pull-right"><a href="/2020/02/29/Zookeeper%E5%AE%9E%E8%B7%B5/"><img class="next-cover" src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Zookeeper实践</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2020/01/16/Jenkins自动持续化实践/" title="Jenkins自动持续化实践"><img class="cover" src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-01-16</div><div class="title">Jenkins自动持续化实践</div></div></a></div><div><a href="/2020/02/21/Redis-HA方案及实践/" title="Redis HA方案及实践"><img class="cover" src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-02-21</div><div class="title">Redis HA方案及实践</div></div></a></div></div></div></div><div class="aside_content" id="aside_content"><div class="card-widget card-info"><div class="card-content"><div class="card-info-avatar is-center"><img class="avatar-img" src="/null" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">Xiangjie</div><div class="author-info__description"></div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/XiangJie-Zhang" target="_blank" title="Github"><i class="fab fa-github"></i></a><a class="social-icon" href="mailto:qluzxj@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a></div></div></div><div class="card-widget card-announcement"><div class="card-content"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%8E%AF%E5%A2%83%E4%BB%8B%E7%BB%8D"><span class="toc-number">2.</span> <span class="toc-text">环境介绍</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%8E%AF%E5%A2%83%E5%87%86%E5%A4%87"><span class="toc-number">3.</span> <span class="toc-text">环境准备</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#ssh%E8%BF%9E%E6%8E%A5"><span class="toc-number">3.1.</span> <span class="toc-text">ssh连接</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E9%85%8D%E7%BD%AE"><span class="toc-number">4.</span> <span class="toc-text">配置</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B7%BB%E5%8A%A0%E6%96%B0%E8%8A%82%E7%82%B9"><span class="toc-number">4.1.</span> <span class="toc-text">添加新节点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%AE%BE%E7%BD%AE%E8%BF%9E%E6%8E%A5"><span class="toc-number">4.2.</span> <span class="toc-text">设置连接</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E8%BF%9E%E6%8E%A5"><span class="toc-number">5.</span> <span class="toc-text">连接</span></a></li></ol></div></div></div><div class="card-widget card-recent-post"><div class="card-content"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink的时间语义和watermark"/></a><div class="content"><a class="title" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark">Flink的时间语义和watermark</a><time datetime="2020-12-23T10:59:07.000Z" title="发表于 2020-12-23 18:59:07">2020-12-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/Flink-API/" title="Flink Api学习"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Api学习"/></a><div class="content"><a class="title" href="/2020/12/17/Flink-API/" title="Flink Api学习">Flink Api学习</a><time datetime="2020-12-17T12:36:28.000Z" title="发表于 2020-12-17 20:36:28">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/ready/" title="ready!"><img src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="ready!"/></a><div class="content"><a class="title" href="/2020/12/17/ready/" title="ready!">ready!</a><time datetime="2020-12-16T16:02:06.000Z" title="发表于 2020-12-17 00:02:06">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink学习笔记"/></a><div class="content"><a class="title" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记">Flink学习笔记</a><time datetime="2020-12-16T12:29:56.000Z" title="发表于 2020-12-16 20:29:56">2020-12-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目"><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/下载.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="k8s集群监控、高可用以及部署自建Java项目"/></a><div class="content"><a class="title" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目">k8s集群监控、高可用以及部署自建Java项目</a><time datetime="2020-12-06T01:26:41.000Z" title="发表于 2020-12-06 09:26:41">2020-12-06</time></div></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By Xiangjie</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><canvas class="fireworks" mobile="false"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script></div></body></html>

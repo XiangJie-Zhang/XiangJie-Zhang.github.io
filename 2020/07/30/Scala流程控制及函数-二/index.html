@@ -1,0 +1,321 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Scala流程控制及函数(二) | zxj</title><meta name="keywords" content="Scala"><meta name="author" content="Xiangjie"><meta name="copyright" content="Xiangjie"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="前言 Scala概述 Scala面对对象编程 Scala隐式转换及集合 Scala模式匹配及泛型    运算符算术运算符与Java算术运算符大致相同。 不同  Scala没有++、--操作  关系运算符与Java关系运算符大致相同。 不同  Scala没有三目运算符；可用val result &#x3D; if (true) 1 else 0替代  因为Scala任何代码都有返回值，并且最后一行代码的输出就">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Scala流程控制及函数(二)">
+<meta property="og:url" content="https://awslzhang.top/2020/07/30/Scala%E6%B5%81%E7%A8%8B%E6%8E%A7%E5%88%B6%E5%8F%8A%E5%87%BD%E6%95%B0-%E4%BA%8C/index.html">
+<meta property="og:site_name" content="zxj">
+<meta property="og:description" content="前言 Scala概述 Scala面对对象编程 Scala隐式转换及集合 Scala模式匹配及泛型    运算符算术运算符与Java算术运算符大致相同。 不同  Scala没有++、--操作  关系运算符与Java关系运算符大致相同。 不同  Scala没有三目运算符；可用val result &#x3D; if (true) 1 else 0替代  因为Scala任何代码都有返回值，并且最后一行代码的输出就">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/Scala-logo.png">
+<meta property="article:published_time" content="2020-07-30T08:50:03.000Z">
+<meta property="article:modified_time" content="2021-01-01T05:49:59.983Z">
+<meta property="article:author" content="Xiangjie">
+<meta property="article:tag" content="Scala">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/Scala-logo.png"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://awslzhang.top/2020/07/30/Scala%E6%B5%81%E7%A8%8B%E6%8E%A7%E5%88%B6%E5%8F%8A%E5%87%BD%E6%95%B0-%E4%BA%8C/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: Xiangjie","link":"链接: ","source":"来源: zxj","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: {"chs_to_cht":"你已切换为繁体","cht_to_chs":"你已切换为简体","day_to_night":"你已切换为深色模式","night_to_day":"你已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#121212","position":"bottom-left"},
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: true,
+  isToc: true,
+  postUpdate: '2021-01-01 13:49:59'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.0.2"><link rel="alternate" href="/atom.xml" title="zxj" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/Scala-logo.png)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">zxj</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Scala流程控制及函数(二)</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-07-30T08:50:03.000Z" title="发表于 2020-07-30 16:50:03">2020-07-30</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-01-01T05:49:59.983Z" title="更新于 2021-01-01 13:49:59">2021-01-01</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Scala/">Scala</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">1.8k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>6分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><ul>
+<li><a href="/2020/07/26/Scala%E6%A6%82%E8%BF%B0/" title="Scala概述">Scala概述</a></li>
+<li><a href="/2020/08/12/Scala%E9%9D%A2%E5%AF%B9%E5%AF%B9%E8%B1%A1%E7%BC%96%E7%A8%8B-%E4%B8%89/" title="Scala面对对象编程">Scala面对对象编程</a></li>
+<li><a href="/2020/08/14/Scala%E9%9A%90%E5%BC%8F%E8%BD%AC%E6%8D%A2%E5%8F%8A%E9%9B%86%E5%90%88-%E5%9B%9B/" title="Scala隐式转换及集合">Scala隐式转换及集合</a></li>
+<li><a href="/2020/08/18/Scala%E6%A8%A1%E5%BC%8F%E5%8C%B9%E9%85%8D%E5%8F%8A%E6%B3%9B%E5%9E%8B/" title="Scala模式匹配及泛型">Scala模式匹配及泛型</a>
+
+</li>
+</ul>
+<h1 id="运算符"><a href="#运算符" class="headerlink" title="运算符"></a>运算符</h1><h2 id="算术运算符"><a href="#算术运算符" class="headerlink" title="算术运算符"></a>算术运算符</h2><p>与Java算术运算符大致相同。</p>
+<p><strong>不同</strong></p>
+<ul>
+<li>Scala没有<code>++</code>、<code>--</code>操作</li>
+</ul>
+<h2 id="关系运算符"><a href="#关系运算符" class="headerlink" title="关系运算符"></a>关系运算符</h2><p>与Java关系运算符大致相同。</p>
+<p><strong>不同</strong></p>
+<ul>
+<li>Scala没有三目运算符；可用<code>val result = if (true) 1 else 0</code>替代</li>
+</ul>
+<p>因为Scala任何代码都有返回值，并且最后一行代码的输出就是返回，所以使用if代替三目运算</p>
+<h1 id="流程控制"><a href="#流程控制" class="headerlink" title="流程控制"></a>流程控制</h1><h2 id="分支控制if-else"><a href="#分支控制if-else" class="headerlink" title="分支控制if-else"></a>分支控制if-else</h2><p>与Java一致。</p>
+<p>值得一提的是，<font color="red"><strong>Scala中的任何代码都有输出</strong></font>，同样<code>if</code>语句也有。</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> str = <span class="keyword">if</span> (<span class="literal">true</span>) &#123;</span><br><span class="line">      <span class="string">&quot;123&quot;</span></span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="string">&quot;31&quot;</span></span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>上述代码输出的是一个字符串。如果没有else，返回的就是Any。</p>
+<p>在Java中这种写法是不行的，<font color="red"><strong>Scala中会返回最后一行代码的输出。</strong></font></p>
+<h2 id="循环控制for"><a href="#循环控制for" class="headerlink" title="循环控制for"></a>循环控制for</h2><p>Java中的for有两种：</p>
+<ul>
+<li><code>for (int i = 0; i &lt; 10; i++) &#123;&#125;</code></li>
+<li><code>for (String str : lists)&#123;&#125;</code></li>
+</ul>
+<p>Scala中只有一种for，它却融合了上面的两种for：</p>
+<p><font color="red"><strong>Scala的循环控制没有：<code>break</code>与<code>continue</code></strong></font></p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">    <span class="keyword">for</span> (i &lt;- <span class="number">1</span> to <span class="number">10</span>) &#123;</span><br><span class="line"></span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="keyword">for</span> (i &lt;- <span class="number">1</span> until <span class="number">10</span>) &#123;</span><br><span class="line">     </span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 步长的涨幅  until的实质就是调用了Range(x,x,1)</span></span><br><span class="line"><span class="keyword">for</span> (i &lt;- <span class="type">Range</span>(<span class="number">1</span>,<span class="number">10</span>,<span class="number">2</span>)) &#123;</span><br><span class="line">     </span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>to</code>：[1, 10]</li>
+<li><code>until</code>：[1,10)</li>
+</ul>
+<p>因为Scala是完全面向对象的语言所以</p>
+<ul>
+<li><code>1 to 10</code>原理上是<code>1.to(10)</code></li>
+<li><code>1 until 10</code>原理上是<code>1.until(10)</code></li>
+</ul>
+<h3 id="替代break与continue"><a href="#替代break与continue" class="headerlink" title="替代break与continue"></a>替代<code>break</code>与<code>continue</code></h3><p><strong>循环守卫代替continue</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">10</span>; i++) &#123;</span><br><span class="line">            <span class="keyword">if</span> (i%<span class="number">2</span>==<span class="number">0</span>)&#123;</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            System.out.println(i);</span><br><span class="line">        &#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (i &lt;- <span class="type">Range</span>(<span class="number">0</span>, <span class="number">10</span>) <span class="keyword">if</span> i%<span class="number">2</span>!=<span class="number">0</span>)&#123;</span><br><span class="line">      println(i)</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>由于Scala中没有<code>continue</code>关键字，所以它只能通过上述代码来实现循环的控制。</p>
+<p><strong>循环守卫，即循环保护式（也称条件判断式，守卫）。</strong><font color="red">保护式为true则进入循环体内部，为false则跳过，类似于continue</font></p>
+<hr>
+<p><strong>Breaks类代替break关键字</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">       <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">10</span>; i++) &#123;</span><br><span class="line">           <span class="keyword">if</span> (i == <span class="number">2</span>) &#123;</span><br><span class="line">               <span class="keyword">break</span>;</span><br><span class="line">           &#125;</span><br><span class="line">       &#125;</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (i &lt;- <span class="type">Range</span>(<span class="number">0</span>, <span class="number">10</span>))&#123;</span><br><span class="line">     <span class="keyword">if</span> (i==<span class="number">2</span>)&#123;</span><br><span class="line">       println(<span class="string">&quot;break&quot;</span>)</span><br><span class="line">       <span class="type">Breaks</span>.<span class="keyword">break</span>()</span><br><span class="line">     &#125;</span><br><span class="line">     println(i)</span><br><span class="line">   &#125;</span><br><span class="line">   println(<span class="string">&quot;finised&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p><strong>输出：</strong></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200731094947153.png" alt="image-20200731094947153"></p>
+<ul>
+<li>发现代码抛出了异常</li>
+<li>然后执行break后整个代码的执行被中断了</li>
+<li>后续的操作没有执行</li>
+</ul>
+<p><strong>这种情况是如何出发的呢，我们看<code>Breaks.break()</code>的代码</strong></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20200731095204977.png" alt="image-20200731095204977"></p>
+<p>可以得知此方法返回的是<code>Nothing</code>，就是返回的不是正常的值(异常)。那么break语句应该这么写</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span></span>(args: <span class="type">Array</span>[<span class="type">String</span>]): <span class="type">Unit</span> = &#123;</span><br><span class="line">   breakable&#123;</span><br><span class="line">     <span class="keyword">for</span> (i &lt;- <span class="type">Range</span>(<span class="number">0</span>, <span class="number">10</span>))&#123;</span><br><span class="line">       <span class="keyword">if</span> (i==<span class="number">2</span>)&#123;</span><br><span class="line">         println(<span class="string">&quot;break&quot;</span>)</span><br><span class="line">         <span class="keyword">break</span></span><br><span class="line">       &#125;</span><br><span class="line">       println(i)</span><br><span class="line">     &#125;</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   println(<span class="string">&quot;finised&quot;</span>)</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p><font color="red"><strong>写在<code>breakable</code>内部即可！</strong></font></p>
+<p>本来应该写<code>Breaks.breakable()</code>，但是我静态导入了这个类的所有方法，所以可以直接调用方法，括号也可省略。<code>import scala.util.control.Breaks._</code></p>
+<h3 id="yield关键字"><a href="#yield关键字" class="headerlink" title="yield关键字"></a>yield关键字</h3><p>众所周知，Scala中任何语句都有输出。所以for，while之类的也有输出，但是他们的输出都是<code>Unit</code>；除非循环后面使用了<code>yield</code>关键字，它会将for中的值组合成一个集合。</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> ints = <span class="keyword">for</span> (i &lt;- <span class="number">1</span> to <span class="number">10</span>) <span class="keyword">yield</span> i * i</span><br><span class="line">println(ints)</span><br></pre></td></tr></table></figure>
+
+<p>这和python的列表解析一个意思</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ls_2 = [value ** <span class="number">2</span> <span class="keyword">for</span> value <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">10</span>)]</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h1 id="函数式编程"><a href="#函数式编程" class="headerlink" title="函数式编程"></a>函数式编程</h1><ol>
+<li>“函数式编程”是一种”编程范式”（programming paradigm）。</li>
+<li>它属于”结构化编程”的一种，主要思想是把运算过程尽量写成一系列嵌套的函数调用。</li>
+<li>函数式编程中，将函数也当做数据类型，<font color="red">因此可以接受函数当作输入（参数）和输出（返回值）</font>。（增强了编程的粒度）</li>
+<li><font color="red">函数式编程中，最重要的就是函数</font></li>
+</ol>
+<hr>
+<p>Java中的方法必须和类/对象绑定(成员方法、静态方法)；而Scala中的函数可<font color="red">以独立存在且可以嵌套使用</font></p>
+<h2 id="函数声明"><a href="#函数声明" class="headerlink" title="函数声明"></a>函数声明</h2><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">函数名</span> </span>([参数名: 参数类型], ...)[[: 返回值类型] =] &#123;</span><br><span class="line">    语句... <span class="comment">//完成某个功能</span></span><br><span class="line">    <span class="keyword">return</span> 返回值</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="函数特点🔺"><a href="#函数特点🔺" class="headerlink" title="函数特点🔺"></a>函数特点🔺</h2><ol>
+<li><p>Scala语法特别灵活，<font color="red">在任意的语法中可以声明其他语法规则</font>。因此可以函数中声明函数：</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">object</span> <span class="title">For</span> </span>&#123;</span><br><span class="line">  <span class="function"><span class="keyword">def</span> <span class="title">main</span></span>(args: <span class="type">Array</span>[<span class="type">String</span>]): <span class="type">Unit</span> = &#123;</span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">test</span></span>(): <span class="type">Unit</span> =&#123;</span><br><span class="line">      println(<span class="string">&quot;function&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    test()</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><font color="red">Scala没有函数重载，</font>在同一作用域中，函数不能重名</p>
+</li>
+<li><p><font color="red">Scala没有<code>throws</code>关键字</font>，函数中如果有异常发送，也不需要在函数声明时抛出异常</p>
+</li>
+<li><p>Scala函数可以<font color="red"><strong>采用自动推断功能</strong></font>来简化函数的声明。</p>
+<ul>
+<li><p>如果函数声明时的返回类型和函数体内的返回类型不一致，以声明时的返回类型有效。</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">test</span></span>():<span class="type">Unit</span>=&#123;</span><br><span class="line">     <span class="keyword">return</span> <span class="number">123</span></span><br><span class="line">   &#125;</span><br><span class="line">     </span><br><span class="line">   println(test()) <span class="comment">// ()</span></span><br><span class="line"><span class="comment">// 最后返回的是声明的Unit</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>如果函数体的最后一行代码进行返回，<code>return</code>关键字可以省略</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">test</span></span>():<span class="type">String</span>=&#123;</span><br><span class="line">  <span class="string">&quot;123&quot;</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>如果可以根据函数最后一行代码推断类型，那么函数的返回类型可以省略</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">test</span></span>() = &#123;</span><br><span class="line">       <span class="number">123</span></span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>如果函数体只有一行代码，<code>&#123;&#125;</code>可以省略</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">test</span></span>() = <span class="number">123</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>如果函数没有参数，<code>()</code>可以省略，<font color="red">但调用时也得省略；如果没有省略，调用时可有可无。</font></p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">test</span></span>() = <span class="number">123</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">test1</span> </span>= <span class="number">312</span></span><br><span class="line">println(test)</span><br><span class="line">println(test())</span><br><span class="line">     </span><br><span class="line">println(test1)</span><br><span class="line">println(test1()) <span class="comment">// 错误</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>如果明确函数没有返回值，<code>=</code>可以省略，此时Return也没有用</p>
+</li>
+</ul>
+</li>
+<li><p>匿名函数的参数在函数体内只被使用一次的话可以用<code>_</code>代替。</p>
+</li>
+</ol>
+<h2 id="可变参数"><a href="#可变参数" class="headerlink" title="可变参数"></a>可变参数</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">params</span><span class="params">(String... param)</span> </span>&#123;</span><br><span class="line">    String[] param1 = param;</span><br><span class="line">    System.out.println(param1);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">param</span></span>(string: <span class="type">String</span>*)= println(string)</span><br><span class="line">param(<span class="string">&quot;1&quot;</span>,<span class="string">&quot;2&quot;</span>,<span class="string">&quot;3&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<h2 id="默认参数"><a href="#默认参数" class="headerlink" title="默认参数"></a>默认参数</h2><p>Java没有</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">test</span></span>(name:<span class="type">String</span>, age:<span class="type">Int</span>=<span class="number">20</span>): <span class="type">Unit</span> =&#123;</span><br><span class="line">  println(<span class="string">s&quot;name=<span class="subst">$name</span>\tage=<span class="subst">$age</span>&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"> test(<span class="string">&quot;zxf&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<h2 id="函数作为函数返回值🔺"><a href="#函数作为函数返回值🔺" class="headerlink" title="函数作为函数返回值🔺"></a>函数作为函数返回值🔺</h2><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">   <span class="function"><span class="keyword">def</span> <span class="title">f</span></span>(): <span class="type">Unit</span> =println(<span class="number">123</span>)</span><br><span class="line"></span><br><span class="line">   <span class="function"><span class="keyword">def</span> <span class="title">f0</span></span>(): ()=&gt;<span class="type">Unit</span> =&#123;</span><br><span class="line">     f</span><br><span class="line">   &#125;</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">f1</span></span>() =&#123;</span><br><span class="line">     f _</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   println(f0()())</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>f0函数等价于f1函数，当声明返回值为函数时，可以直接返回f函数</li>
+<li><font color="red">当让Scala自动推断返回值时，如果返回值是函数的话，需要加入<code> _</code>证明返回的是函数</font>，否则上面的代码就会直接运行f，返回的是Unit</li>
+</ul>
+<h3 id="函数的柯里化"><a href="#函数的柯里化" class="headerlink" title="函数的柯里化"></a>函数的柯里化</h3><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">   <span class="function"><span class="keyword">def</span> <span class="title">f1</span></span>(test: <span class="type">Int</span>): (<span class="type">Int</span>) =&gt; <span class="type">Int</span> = &#123;</span><br><span class="line">     <span class="function"><span class="keyword">def</span> <span class="title">f2</span></span>(test1: <span class="type">Int</span>): <span class="type">Int</span> = &#123;</span><br><span class="line">       test * test1</span><br><span class="line">     &#125;</span><br><span class="line"></span><br><span class="line">     f2</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   println(f1(<span class="number">2</span>)(<span class="number">3</span>))</span><br><span class="line"><span class="comment">// 柯里化</span></span><br><span class="line">   <span class="function"><span class="keyword">def</span> <span class="title">f3</span></span>(t1: <span class="type">Int</span>)(t2: <span class="type">Int</span>): <span class="type">Int</span> = &#123;</span><br><span class="line">     t1 * t2</span><br><span class="line">   &#125;</span><br><span class="line">   println(f3(<span class="number">2</span>)(<span class="number">3</span>))</span><br></pre></td></tr></table></figure>
+
+<p>只要有柯里化，就涉及到函数的闭包：</p>
+<ul>
+<li>如上面f1函数中的f2函数，它使用了f1函数的变量test。</li>
+<li>当调用f1函数返回f2函数时，f2函数中的变量test还在被使用</li>
+</ul>
+<p><font color="red"><strong>函数实现逻辑时，将外部的变量引入到函数的内容，改变了这个变量的生命周期，称之为闭包。</strong></font></p>
+<h2 id="函数作为函数参数🔺"><a href="#函数作为函数参数🔺" class="headerlink" title="函数作为函数参数🔺"></a>函数作为函数参数🔺</h2><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">test</span></span>(fun: () =&gt; <span class="type">Unit</span>): <span class="type">Unit</span> = &#123;</span><br><span class="line">  fun()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">t</span></span>(): <span class="type">Unit</span> =&#123;</span><br><span class="line">  println(<span class="string">&quot;函数参数&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">test(t _)    <span class="comment">// 如果传入t/t()会直接运行t函数，所以要加入t _证明传入的是函数本身</span></span><br></pre></td></tr></table></figure>
+
+
+
+<p>但是麻烦，所以一般函数作为参数的函数一般是匿名函数</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">test</span></span>(fun: () =&gt; <span class="type">Unit</span>): <span class="type">Unit</span> = &#123;</span><br><span class="line">  fun()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">test(()=&gt;&#123;println(<span class="string">&quot;123&quot;</span>)&#125;)</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<p><font color="red"></font></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">Xiangjie</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://awslzhang.top/2020/07/30/Scala%E6%B5%81%E7%A8%8B%E6%8E%A7%E5%88%B6%E5%8F%8A%E5%87%BD%E6%95%B0-%E4%BA%8C/">https://awslzhang.top/2020/07/30/Scala%E6%B5%81%E7%A8%8B%E6%8E%A7%E5%88%B6%E5%8F%8A%E5%87%BD%E6%95%B0-%E4%BA%8C/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://awslzhang.top" target="_blank">zxj</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Scala/">Scala</a></div><div class="post_share"><div class="social-share" data-image="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/Scala-logo.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2020/08/12/Scala%E9%9D%A2%E5%AF%B9%E5%AF%B9%E8%B1%A1%E7%BC%96%E7%A8%8B-%E4%B8%89/"><img class="prev-cover" src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/Scala-logo.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">Scala面向对象编程(三)</div></div></a></div><div class="next-post pull-right"><a href="/2020/07/26/Scala%E6%A6%82%E8%BF%B0/"><img class="next-cover" src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/Scala-logo.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Scala概述(一)</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2020/07/26/Scala概述/" title="Scala概述(一)"><img class="cover" src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/Scala-logo.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-07-26</div><div class="title">Scala概述(一)</div></div></a></div><div><a href="/2020/08/18/Scala模式匹配及泛型/" title="Scala模式匹配及泛型"><img class="cover" src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/Scala-logo.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-08-18</div><div class="title">Scala模式匹配及泛型</div></div></a></div><div><a href="/2020/08/12/Scala面对对象编程-三/" title="Scala面向对象编程(三)"><img class="cover" src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/Scala-logo.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-08-12</div><div class="title">Scala面向对象编程(三)</div></div></a></div><div><a href="/2020/08/14/Scala隐式转换及集合-四/" title="Scala隐式转换及集合(四)"><img class="cover" src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/Scala-logo.png" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-08-14</div><div class="title">Scala隐式转换及集合(四)</div></div></a></div></div></div></div><div class="aside_content" id="aside_content"><div class="card-widget card-info"><div class="card-content"><div class="card-info-avatar is-center"><img class="avatar-img" src="/null" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">Xiangjie</div><div class="author-info__description"></div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/XiangJie-Zhang" target="_blank" title="Github"><i class="fab fa-github"></i></a><a class="social-icon" href="mailto:qluzxj@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a></div></div></div><div class="card-widget card-announcement"><div class="card-content"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E8%BF%90%E7%AE%97%E7%AC%A6"><span class="toc-number">2.</span> <span class="toc-text">运算符</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%AE%97%E6%9C%AF%E8%BF%90%E7%AE%97%E7%AC%A6"><span class="toc-number">2.1.</span> <span class="toc-text">算术运算符</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%B3%E7%B3%BB%E8%BF%90%E7%AE%97%E7%AC%A6"><span class="toc-number">2.2.</span> <span class="toc-text">关系运算符</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%B5%81%E7%A8%8B%E6%8E%A7%E5%88%B6"><span class="toc-number">3.</span> <span class="toc-text">流程控制</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%86%E6%94%AF%E6%8E%A7%E5%88%B6if-else"><span class="toc-number">3.1.</span> <span class="toc-text">分支控制if-else</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BE%AA%E7%8E%AF%E6%8E%A7%E5%88%B6for"><span class="toc-number">3.2.</span> <span class="toc-text">循环控制for</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9B%BF%E4%BB%A3break%E4%B8%8Econtinue"><span class="toc-number">3.2.1.</span> <span class="toc-text">替代break与continue</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#yield%E5%85%B3%E9%94%AE%E5%AD%97"><span class="toc-number">3.2.2.</span> <span class="toc-text">yield关键字</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%87%BD%E6%95%B0%E5%BC%8F%E7%BC%96%E7%A8%8B"><span class="toc-number">4.</span> <span class="toc-text">函数式编程</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%87%BD%E6%95%B0%E5%A3%B0%E6%98%8E"><span class="toc-number">4.1.</span> <span class="toc-text">函数声明</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%87%BD%E6%95%B0%E7%89%B9%E7%82%B9%F0%9F%94%BA"><span class="toc-number">4.2.</span> <span class="toc-text">函数特点🔺</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%AF%E5%8F%98%E5%8F%82%E6%95%B0"><span class="toc-number">4.3.</span> <span class="toc-text">可变参数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%BB%98%E8%AE%A4%E5%8F%82%E6%95%B0"><span class="toc-number">4.4.</span> <span class="toc-text">默认参数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%87%BD%E6%95%B0%E4%BD%9C%E4%B8%BA%E5%87%BD%E6%95%B0%E8%BF%94%E5%9B%9E%E5%80%BC%F0%9F%94%BA"><span class="toc-number">4.5.</span> <span class="toc-text">函数作为函数返回值🔺</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%87%BD%E6%95%B0%E7%9A%84%E6%9F%AF%E9%87%8C%E5%8C%96"><span class="toc-number">4.5.1.</span> <span class="toc-text">函数的柯里化</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%87%BD%E6%95%B0%E4%BD%9C%E4%B8%BA%E5%87%BD%E6%95%B0%E5%8F%82%E6%95%B0%F0%9F%94%BA"><span class="toc-number">4.6.</span> <span class="toc-text">函数作为函数参数🔺</span></a></li></ol></li></ol></div></div></div><div class="card-widget card-recent-post"><div class="card-content"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink的时间语义和watermark"/></a><div class="content"><a class="title" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark">Flink的时间语义和watermark</a><time datetime="2020-12-23T10:59:07.000Z" title="发表于 2020-12-23 18:59:07">2020-12-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/Flink-API/" title="Flink Api学习"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Api学习"/></a><div class="content"><a class="title" href="/2020/12/17/Flink-API/" title="Flink Api学习">Flink Api学习</a><time datetime="2020-12-17T12:36:28.000Z" title="发表于 2020-12-17 20:36:28">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/ready/" title="ready!"><img src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="ready!"/></a><div class="content"><a class="title" href="/2020/12/17/ready/" title="ready!">ready!</a><time datetime="2020-12-16T16:02:06.000Z" title="发表于 2020-12-17 00:02:06">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink学习笔记"/></a><div class="content"><a class="title" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记">Flink学习笔记</a><time datetime="2020-12-16T12:29:56.000Z" title="发表于 2020-12-16 20:29:56">2020-12-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目"><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/下载.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="k8s集群监控、高可用以及部署自建Java项目"/></a><div class="content"><a class="title" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目">k8s集群监控、高可用以及部署自建Java项目</a><time datetime="2020-12-06T01:26:41.000Z" title="发表于 2020-12-06 09:26:41">2020-12-06</time></div></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By Xiangjie</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><canvas class="fireworks" mobile="false"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script></div></body></html>

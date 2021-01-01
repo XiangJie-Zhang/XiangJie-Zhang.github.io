@@ -1,0 +1,231 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spring Security开启防护csrf攻击 | zxj</title><meta name="keywords" content="Spring Security"><meta name="author" content="Xiangjie"><meta name="copyright" content="Xiangjie"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="前言在进行WEB开发的时候，时常听到资深的开发人员说要注意防范CSRF、XSS攻击，但是很多时候人们连什么是CSRF都不知道。本文将粗略地向大家介绍下CSRF的原理和防御手段。CSRF（Cross-site request forgery）跨站请求伪造 上节的项目">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spring Security开启防护csrf攻击">
+<meta property="og:url" content="https://awslzhang.top/2020/01/10/Spring-Security%E5%BC%80%E5%90%AF%E9%98%B2%E6%8A%A4csrf%E6%94%BB%E5%87%BB/index.html">
+<meta property="og:site_name" content="zxj">
+<meta property="og:description" content="前言在进行WEB开发的时候，时常听到资深的开发人员说要注意防范CSRF、XSS攻击，但是很多时候人们连什么是CSRF都不知道。本文将粗略地向大家介绍下CSRF的原理和防御手段。CSRF（Cross-site request forgery）跨站请求伪造 上节的项目">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg">
+<meta property="article:published_time" content="2020-01-10T06:36:11.000Z">
+<meta property="article:modified_time" content="2021-01-01T05:49:59.995Z">
+<meta property="article:author" content="Xiangjie">
+<meta property="article:tag" content="Spring Security">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://awslzhang.top/2020/01/10/Spring-Security%E5%BC%80%E5%90%AF%E9%98%B2%E6%8A%A4csrf%E6%94%BB%E5%87%BB/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: Xiangjie","link":"链接: ","source":"来源: zxj","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: {"chs_to_cht":"你已切换为繁体","cht_to_chs":"你已切换为简体","day_to_night":"你已切换为深色模式","night_to_day":"你已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#121212","position":"bottom-left"},
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: true,
+  isToc: true,
+  postUpdate: '2021-01-01 13:49:59'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.0.2"><link rel="alternate" href="/atom.xml" title="zxj" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">zxj</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Spring Security开启防护csrf攻击</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-01-10T06:36:11.000Z" title="发表于 2020-01-10 14:36:11">2020-01-10</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-01-01T05:49:59.995Z" title="更新于 2021-01-01 13:49:59">2021-01-01</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/web%E5%90%8E%E7%AB%AF/">web后端</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">1.4k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>5分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在进行WEB开发的时候，时常听到资深的开发人员说要注意防范CSRF、XSS攻击，但是很多时候人们连什么是CSRF都不知道。本文将粗略地向大家介绍下CSRF的原理和防御手段。CSRF（Cross-site request forgery）跨站请求伪造</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/XiangJie-Zhang/Spring-Security">上节的项目</a></p>
+<a id="more"></a>
+
+<h1 id="csrf"><a href="#csrf" class="headerlink" title="csrf"></a>csrf</h1><h2 id="什么是csrf"><a href="#什么是csrf" class="headerlink" title="什么是csrf"></a>什么是csrf</h2><p>请看<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-security/site/docs/4.2.0.BUILD-SNAPSHOT/reference/htmlsingle/#csrf">Spring Security官网介绍！</a></p>
+<h2 id="csrf攻击原理"><a href="#csrf攻击原理" class="headerlink" title="csrf攻击原理"></a>csrf攻击原理</h2><p>csrf攻击的原理就是利用浏览器的机制，某个网站是采用cookie+session机制来验证用户登陆时，用户请求只需要携带cookie中的<em>JSESSIONID</em>，网站就认为你已经登陆，完成各种操作；</p>
+<p>但是，因为cookie是存在在你电脑本地的，<font color='red'>当你发请求时会自动携带你请求域名的cookie，无论当前界面是否是当前域名！！</font></p>
+<p>例如：你登陆了text.com本地存储了它的cookie，这时你访问了另外一个界面attack.com，这是一个攻击界面，它里面有个text.com/xxx的请求，你一点击就发送请求，因为浏览器的特性，浏览器会给请求自动携带上text.com的cookie，这就导致了跨站请求伪造。</p>
+<p><font color='blue'>这是对上面链接上的例子的仿造，详细还请看上面的链接！</font></p>
+<h2 id="如何抵御"><a href="#如何抵御" class="headerlink" title="如何抵御"></a>如何抵御</h2><p>每次请求要携带一个随机token，可以放cookie里，每次请求时手动把它作为参数或者请求头部，发送请求。</p>
+<p>这时，可能会有疑问，发生csrf就是因为cookie的机制，为什么token还要放cookie里？</p>
+<p>这里只是一种选择，此时，我们不光放在cookie里，还是设置http-only为false（可以通过js读取到），上述放在cookie被伪造是因为浏览器只会携带cookie，我们后端代码只验证参数/头部的token，不理会cookie里的这部分。csrf是无法直接构造参数或者伪造头部的，因为他们读取不到我们的token，虽然我们设置它为http-only：false了，但是也只有我们自己当前域名下的js能访问到，其他网址访问不到的。</p>
+<h2 id="抵御原理"><a href="#抵御原理" class="headerlink" title="抵御原理"></a>抵御原理</h2><p>参考网址：<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/2cfb676c58b1">CSRF令牌为什么要通过HTTP头部而不是cookie来验证</a></p>
+<ol>
+<li>用户发送get请求</li>
+<li>服务器生成token，放入session/cookie中</li>
+<li>浏览器接受后保存</li>
+<li>浏览器发送请求前，先使用js获取cookie值，构造X-XSRF-TOKEN头部</li>
+<li>发送请求</li>
+<li>服务器获取此请求头的内容与服务器的token对比</li>
+<li>成功/失败</li>
+</ol>
+<h1 id="SpringSecurity开启csrf防护"><a href="#SpringSecurity开启csrf防护" class="headerlink" title="SpringSecurity开启csrf防护"></a>SpringSecurity开启csrf防护</h1><h2 id="注意点"><a href="#注意点" class="headerlink" title="注意点"></a>注意点</h2><p>首先通过上述<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-security/site/docs/4.2.0.BUILD-SNAPSHOT/reference/htmlsingle/#csrf">Spring Security官网介绍！</a>总结了几点：</p>
+<ol>
+<li>开启csrf后，如果选择将csrf存储在cookie中且读取需要使用js的话，必须设置<code>cookieHttpOnly=false</code></li>
+<li>如果将csrf保存在session里面，会有令牌随着session过期的风险，会返回403错误</li>
+<li>使用csrf会将注销请求<code>/logout</code>变为 POST请求，如果非得用GET请求，需要配置<code>.logoutRequestMatcher(new AntPathRequestMatcher(&quot;/logout&quot;));</code></li>
+<li>如果要配置CORS跨域，最好使用springsecurity自带的，并在最前面使用这样不会验证它的token，因为预检请求将不包含任何cookie</li>
+<li>ss默认针对PATCH,POST,PUT,DELETE请求进行防护</li>
+</ol>
+<h2 id="验证"><a href="#验证" class="headerlink" title="验证"></a>验证</h2><p>如果把csrf放在cookie里面，我们可以在类<code>CookieCsrfTokenRepository</code>看到默认配置</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">CookieCsrfTokenRepository</span> <span class="keyword">implements</span> <span class="title">CsrfTokenRepository</span> </span>&#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> String DEFAULT_CSRF_COOKIE_NAME = <span class="string">&quot;XSRF-TOKEN&quot;</span>;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> String DEFAULT_CSRF_PARAMETER_NAME = <span class="string">&quot;_csrf&quot;</span>;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> String DEFAULT_CSRF_HEADER_NAME = <span class="string">&quot;X-XSRF-TOKEN&quot;</span>;</span><br><span class="line">    <span class="keyword">private</span> String parameterName = <span class="string">&quot;_csrf&quot;</span>;</span><br><span class="line">    <span class="keyword">private</span> String headerName = <span class="string">&quot;X-XSRF-TOKEN&quot;</span>;</span><br><span class="line">    <span class="keyword">private</span> String cookieName = <span class="string">&quot;XSRF-TOKEN&quot;</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">boolean</span> cookieHttpOnly = <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">private</span> String cookiePath;</span><br><span class="line">    <span class="keyword">private</span> String cookieDomain;</span><br><span class="line">    ....</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+<p>意思是：</p>
+<p>他会对请求的头部寻找X-XSRF-TOKEN的值或者参数为_csrf的值，找到对应value和服务器中的对比。</p>
+<p>两者有一个就行。</p>
+<h2 id="代码开启"><a href="#代码开启" class="headerlink" title="代码开启"></a>代码开启</h2><p><a target="_blank" rel="noopener" href="https://github.com/XiangJie-Zhang/Spring-Security">在之前的项目</a>中添加代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">http.cors()</span><br><span class="line">               .and()</span><br><span class="line">               <span class="comment">// 开启csrf</span></span><br><span class="line">               <span class="comment">// ，并把csrf放如cookie中，vue无法读取session</span></span><br><span class="line">               .csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()).ignoringAntMatchers(<span class="string">&quot;/login&quot;</span>,<span class="string">&quot;/public&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<h2 id="效果"><a href="#效果" class="headerlink" title="效果"></a>效果</h2><p>我们看一下开启的效果，我的代码是将csrf放在了cookie里面的，<code>login</code>、<code>public</code>链接不走csrf过滤，我们访问一下：</p>
+<p><font color='red'><strong>注意，我们这是用的cookie方式！！还有一种session方式，这里不做介绍。</strong></font></p>
+<p>我们随便请求一个链接就会在cookie中看到我们的csrf令牌</p>
+<p><img src="1.PNG"></p>
+<p>因为我们csrf不对GET防护，我们post请求一个受保护的链接试试，首先先把我们的用户验证信息获取到：</p>
+<p><img src="2.PNG"></p>
+<p>然后访问一个受保护的请求，我们需要构造之前项目自定义的登陆token还有csrf令牌：</p>
+<p><img src="3.PNG"></p>
+<p>假如我们不传入csrf，服务器会返回一个最新的csrf 令牌:</p>
+<p><img src="4.PNG"></p>
+<p><img src="5.PNG"></p>
+<h2 id="界面中如何使用"><a href="#界面中如何使用" class="headerlink" title="界面中如何使用"></a>界面中如何使用</h2><p>如果使用Thymeleaf 2.1+ ：</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">html</span> <span class="attr">xmlns:th</span>=<span class="string">&quot;http://www.thymeleaf.org&quot;</span> <span class="attr">lang</span>=<span class="string">&quot;&quot;</span>&gt;</span></span><br><span class="line">....</span><br><span class="line"><span class="tag">&lt;<span class="name">form</span> <span class="attr">action</span>=<span class="string">&quot;/admin&quot;</span></span></span><br><span class="line"><span class="tag">      <span class="attr">method</span>=<span class="string">&quot;post&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;submit&quot;</span></span></span><br><span class="line"><span class="tag">           <span class="attr">value</span>=<span class="string">&quot;Log out&quot;</span>/&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span></span></span><br><span class="line"><span class="tag">           <span class="attr">th:name</span>=<span class="string">&quot;$&#123;_csrf.parameterName&#125;&quot;</span></span></span><br><span class="line"><span class="tag">           <span class="attr">th:value</span>=<span class="string">&quot;$&#123;_csrf.token&#125;&quot;</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>如果使用xhr:</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">html</span> <span class="attr">xmlns:th</span>=<span class="string">&quot;http://www.thymeleaf.org&quot;</span> <span class="attr">lang</span>=<span class="string">&quot;&quot;</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">head</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">meta</span> <span class="attr">charset</span>=<span class="string">&quot;UTF-8&quot;</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">title</span>&gt;</span>Title<span class="tag">&lt;/<span class="name">title</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">meta</span> <span class="attr">name</span>=<span class="string">&quot;_csrf&quot;</span> <span class="attr">th:content</span>=<span class="string">&quot;$&#123;_csrf.token&#125;&quot;</span>/&gt;</span></span><br><span class="line">    <span class="comment">&lt;!-- default header name is X-CSRF-TOKEN --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">meta</span> <span class="attr">name</span>=<span class="string">&quot;_csrf_header&quot;</span> <span class="attr">th:content</span>=<span class="string">&quot;$&#123;_csrf.headerName&#125;&quot;</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$(<span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line"><span class="keyword">var</span> token = $(<span class="string">&quot;meta[name=&#x27;_csrf&#x27;]&quot;</span>).attr(<span class="string">&quot;content&quot;</span>);</span><br><span class="line"><span class="keyword">var</span> header = $(<span class="string">&quot;meta[name=&#x27;_csrf_header&#x27;]&quot;</span>).attr(<span class="string">&quot;content&quot;</span>);</span><br><span class="line">$(<span class="built_in">document</span>).ajaxSend(<span class="function"><span class="keyword">function</span>(<span class="params">e, xhr, options</span>) </span>&#123;</span><br><span class="line">    xhr.setRequestHeader(header, token);</span><br><span class="line">&#125;);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+
+<p><font color='red'><strong>前后端分离，建议使用axios的拦截器，为每个请求发起时，从cookie手动读取并放在请求头！！</strong></font></p>
+<hr>
+<h1 id="引用链接"><a href="#引用链接" class="headerlink" title="引用链接"></a>引用链接</h1><p><a target="_blank" rel="noopener" href="https://docs.spring.io/spring-security/site/docs/4.2.0.BUILD-SNAPSHOT/reference/htmlsingle/#csrf">Spring Security官网介绍！</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.jianshu.com/p/2cfb676c58b1">CSRF令牌为什么要通过HTTP头部而不是cookie来验证</a></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">Xiangjie</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://awslzhang.top/2020/01/10/Spring-Security%E5%BC%80%E5%90%AF%E9%98%B2%E6%8A%A4csrf%E6%94%BB%E5%87%BB/">https://awslzhang.top/2020/01/10/Spring-Security%E5%BC%80%E5%90%AF%E9%98%B2%E6%8A%A4csrf%E6%94%BB%E5%87%BB/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://awslzhang.top" target="_blank">zxj</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Spring-Security/">Spring Security</a></div><div class="post_share"><div class="social-share" data-image="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2020/01/16/Jenkins%E8%87%AA%E5%8A%A8%E6%8C%81%E7%BB%AD%E5%8C%96%E5%AE%9E%E8%B7%B5/"><img class="prev-cover" src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">Jenkins自动持续化实践</div></div></a></div><div class="next-post pull-right"><a href="/2020/01/04/Spring-Security%E5%85%A5%E9%97%A8%EF%BC%9A%E5%9F%BA%E4%BA%8E%E6%95%B0%E6%8D%AE%E5%BA%93%E9%AA%8C%E8%AF%81/"><img class="next-cover" src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Spring Security入门：基于数据库验证</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2020/01/04/Spring-Security入门：基于数据库验证/" title="Spring Security入门：基于数据库验证"><img class="cover" src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-01-04</div><div class="title">Spring Security入门：基于数据库验证</div></div></a></div></div></div></div><div class="aside_content" id="aside_content"><div class="card-widget card-info"><div class="card-content"><div class="card-info-avatar is-center"><img class="avatar-img" src="/null" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">Xiangjie</div><div class="author-info__description"></div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/XiangJie-Zhang" target="_blank" title="Github"><i class="fab fa-github"></i></a><a class="social-icon" href="mailto:qluzxj@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a></div></div></div><div class="card-widget card-announcement"><div class="card-content"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#csrf"><span class="toc-number">2.</span> <span class="toc-text">csrf</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E6%98%AFcsrf"><span class="toc-number">2.1.</span> <span class="toc-text">什么是csrf</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#csrf%E6%94%BB%E5%87%BB%E5%8E%9F%E7%90%86"><span class="toc-number">2.2.</span> <span class="toc-text">csrf攻击原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%A6%82%E4%BD%95%E6%8A%B5%E5%BE%A1"><span class="toc-number">2.3.</span> <span class="toc-text">如何抵御</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%8A%B5%E5%BE%A1%E5%8E%9F%E7%90%86"><span class="toc-number">2.4.</span> <span class="toc-text">抵御原理</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#SpringSecurity%E5%BC%80%E5%90%AFcsrf%E9%98%B2%E6%8A%A4"><span class="toc-number">3.</span> <span class="toc-text">SpringSecurity开启csrf防护</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B3%A8%E6%84%8F%E7%82%B9"><span class="toc-number">3.1.</span> <span class="toc-text">注意点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%AA%8C%E8%AF%81"><span class="toc-number">3.2.</span> <span class="toc-text">验证</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%A3%E7%A0%81%E5%BC%80%E5%90%AF"><span class="toc-number">3.3.</span> <span class="toc-text">代码开启</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%95%88%E6%9E%9C"><span class="toc-number">3.4.</span> <span class="toc-text">效果</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%95%8C%E9%9D%A2%E4%B8%AD%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8"><span class="toc-number">3.5.</span> <span class="toc-text">界面中如何使用</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%BC%95%E7%94%A8%E9%93%BE%E6%8E%A5"><span class="toc-number">4.</span> <span class="toc-text">引用链接</span></a></li></ol></div></div></div><div class="card-widget card-recent-post"><div class="card-content"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink的时间语义和watermark"/></a><div class="content"><a class="title" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark">Flink的时间语义和watermark</a><time datetime="2020-12-23T10:59:07.000Z" title="发表于 2020-12-23 18:59:07">2020-12-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/Flink-API/" title="Flink Api学习"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Api学习"/></a><div class="content"><a class="title" href="/2020/12/17/Flink-API/" title="Flink Api学习">Flink Api学习</a><time datetime="2020-12-17T12:36:28.000Z" title="发表于 2020-12-17 20:36:28">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/ready/" title="ready!"><img src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="ready!"/></a><div class="content"><a class="title" href="/2020/12/17/ready/" title="ready!">ready!</a><time datetime="2020-12-16T16:02:06.000Z" title="发表于 2020-12-17 00:02:06">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink学习笔记"/></a><div class="content"><a class="title" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记">Flink学习笔记</a><time datetime="2020-12-16T12:29:56.000Z" title="发表于 2020-12-16 20:29:56">2020-12-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目"><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/下载.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="k8s集群监控、高可用以及部署自建Java项目"/></a><div class="content"><a class="title" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目">k8s集群监控、高可用以及部署自建Java项目</a><time datetime="2020-12-06T01:26:41.000Z" title="发表于 2020-12-06 09:26:41">2020-12-06</time></div></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By Xiangjie</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><canvas class="fireworks" mobile="false"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script></div></body></html>

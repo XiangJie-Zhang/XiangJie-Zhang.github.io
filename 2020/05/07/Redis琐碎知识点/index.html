@@ -1,0 +1,393 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Redis琐碎知识点 | zxj</title><meta name="author" content="Xiangjie"><meta name="copyright" content="Xiangjie"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="Redis的前世今生查询数据的影响因素有：带宽、硬盘寻址时间。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis琐碎知识点">
+<meta property="og:url" content="https://awslzhang.top/2020/05/07/Redis%E7%90%90%E7%A2%8E%E7%9F%A5%E8%AF%86%E7%82%B9/index.html">
+<meta property="og:site_name" content="zxj">
+<meta property="og:description" content="Redis的前世今生查询数据的影响因素有：带宽、硬盘寻址时间。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://i.loli.net/2020/06/09/bp9DlYjrGi2q8oE.png">
+<meta property="article:published_time" content="2020-05-07T07:32:51.000Z">
+<meta property="article:modified_time" content="2021-01-01T05:49:59.982Z">
+<meta property="article:author" content="Xiangjie">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://i.loli.net/2020/06/09/bp9DlYjrGi2q8oE.png"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://awslzhang.top/2020/05/07/Redis%E7%90%90%E7%A2%8E%E7%9F%A5%E8%AF%86%E7%82%B9/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: Xiangjie","link":"链接: ","source":"来源: zxj","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: {"chs_to_cht":"你已切换为繁体","cht_to_chs":"你已切换为简体","day_to_night":"你已切换为深色模式","night_to_day":"你已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#121212","position":"bottom-left"},
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: true,
+  isToc: true,
+  postUpdate: '2021-01-01 13:49:59'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.0.2"><link rel="alternate" href="/atom.xml" title="zxj" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://i.loli.net/2020/06/09/bp9DlYjrGi2q8oE.png)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">zxj</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Redis琐碎知识点</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-05-07T07:32:51.000Z" title="发表于 2020-05-07 15:32:51">2020-05-07</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-01-01T05:49:59.982Z" title="更新于 2021-01-01 13:49:59">2021-01-01</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Redis/">Redis</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">6.1k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>18分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="Redis的前世今生"><a href="#Redis的前世今生" class="headerlink" title="Redis的前世今生"></a>Redis的前世今生</h1><p>查询数据的影响因素有：带宽、硬盘寻址时间。</p>
+<a id="more"></a>
+
+<p><strong>数据放入硬盘中</strong></p>
+<p>平时我们会把数据存储到关系型数据库中(例如：MySQL)，当数据量过大时，查询都会变慢。这时是因为它的寻址时间变长了，但是我们可以给数据库建立索引来加快数据的检索速度。</p>
+<p>那么问题来了，如果一个表中的数据量很大时，它的增删查改会有什么影响？</p>
+<p>首先，增删查改可以归为读、写两类操作。其中写的操作肯定会变慢，因为数据更新后会维护索引，在这大量数据下，维护索引很耗性能的。然后是读操作，正规来说，<font color='red'>如果数据库只有一个连接、只进行这次查询、且where命中索引，那么它的查询速度还是很快的</font>。但是如果假如有10w并发同时查询，虽然查询速度可以，但是因为同时对硬盘中拿数据，硬盘不可能一口气将所有数据吐给使用者，吞吐量成了问题，io成了瓶颈，硬盘的寻址时间是ms级别的。这就导致了查询变慢。！</p>
+<p>因此，会出现将数据存到内存的技术。内存的寻址时间是ns级别的，它绝对比从磁盘中拿数据快一个数量级，所以它不惧怕高并发的读取。</p>
+<h1 id="内存数据库的种类"><a href="#内存数据库的种类" class="headerlink" title="内存数据库的种类"></a>内存数据库的种类</h1><ol>
+<li><strong>SAP HANA</strong></li>
+<li><strong>Redis</strong></li>
+<li><strong>Memcached</strong></li>
+</ol>
+<p><strong>SAP HANA</strong></p>
+<p>是一个数据全部放入内容的关系型数据库，很贵。</p>
+<p><strong>Redis</strong></p>
+<p>是一个基于内存的k-v形式的持久化数据库 。</p>
+<p><strong>Memcached</strong></p>
+<p>Memcached 是一套高性能的、分布式内存对象缓存系统。</p>
+<h2 id="Redis与Memcached对比"><a href="#Redis与Memcached对比" class="headerlink" title="Redis与Memcached对比"></a>Redis与Memcached对比</h2><p><strong>SAP HANA</strong>太贵不考虑。</p>
+<p>区别：</p>
+<ol>
+<li>Redis支持的数据类型要丰富得多；而Memcached只支持string类型，所以不能实现计算向数据移动(需要客户端自己处理复杂对象 )</li>
+<li>Redis可以设置持久化；memcache不支持数据持久存储 </li>
+<li>Redis使用单核，无法发挥多核优势，但是保证了数据按顺序提交；而Memcached可以使用多核</li>
+<li>虽然redis单线程模型只能使用一个cpu，但可以开启多个redis进程</li>
+</ol>
+<p>相同点：</p>
+<p><strong>Redis与Memcached都是k-v形式的。</strong></p>
+<p>模型为 key- value是为了做缓存(只针对于数据)，数据不完整(因为是基于内存不适合存放全部数据)，不宜存放组织数据关系(数据关系会造成内容存放数据冗余)</p>
+<h1 id="Redis"><a href="#Redis" class="headerlink" title="Redis"></a>Redis</h1><h2 id="Redis的五种数据结构"><a href="#Redis的五种数据结构" class="headerlink" title="Redis的五种数据结构"></a><strong>Redis的五种数据结构</strong></h2><ol>
+<li>string</li>
+<li>hash</li>
+<li>list</li>
+<li>set</li>
+<li>sorted set (zset)</li>
+</ol>
+<p>不光如此，每种数据结构都有自己的本地方法(有助于Redis计算向数据移动)</p>
+<p><strong>什么是计算向数据移动/数据向计算移动？</strong></p>
+<p>这里以Memcached、Redis举个例子。我们想存储一个数组。如果在Memcached中存储我们只能序列化成string存到其中，取得时候获取整个value，自己在程序里反序列化得到数组。如果存储在Redis中，我们直接使用它的list类型，这样我们传送个指令给它(index(x))，他会直接返回结果给我们，不需要我们自己计算(也是一种 IO优化)。</p>
+<p><img src="https://i.loli.net/2020/05/09/keODq41hJCwPFx3.png" alt="计算向数据移动、数据向计算移动"></p>
+<h2 id="Redis为什么使用单线程"><a href="#Redis为什么使用单线程" class="headerlink" title="Redis为什么使用单线程"></a><strong>Redis为什么使用单线程</strong></h2><p><strong>Redis是单线程的(主 worker为单线程)，但在6.x版本IO Threads多线程(需要主动开启)</strong></p>
+<p>在回答这几个问题之前先问几个问题</p>
+<p>多线程的本质是什么?</p>
+<p>多线程的本质其实还是单线程,因为在任一个时间点其实只有一个线程在跑,只不过CPU切换线程速度太快,让我们感觉是多个线程在一起跑,其实所有的指令还是一个接着一个的跑的。</p>
+<p>多线程一定比单线程快么？</p>
+<p>答案肯定是否定的了。线程快,是因为其降低了不必要的耗时,耗时其实主要集中在两大块 磁盘IO 线程切换，磁盘IO耗时远远大于线程切换耗时，多线程有助于降低磁盘IO耗时；单线程没有线程切换耗时，日常开发涉及磁盘IO因此使用多线程,磁盘IO的耗时危害已经将线程切换的危害忽略了,因此会觉得多线程快。</p>
+<p>Redis中没有磁盘IO,使用单线程没有CPU切换耗时,也不用考虑同步锁问题,因此速度更快</p>
+<p><strong>Redis使用单线程，为什么速度还那么快？</strong></p>
+<ol>
+<li>内存访问，内存响应时间是100ns,这是达到每秒万级别访问的基础。而硬盘的响应时间是ms级别</li>
+<li>非阻塞io,epoll作为io多路复用的实现，再加上redis中自身事件处理模型将epoll中连接，读写，关闭都转换成事件，不在网络io上浪费太多时间。有些地方也称这种IO方式为event driven IO(事件驱动IO)</li>
+<li>单线程避免了线程切换和竞态产生的消耗</li>
+</ol>
+<h2 id="Redis是如何使用epoll多路复用的？"><a href="#Redis是如何使用epoll多路复用的？" class="headerlink" title="Redis是如何使用epoll多路复用的？"></a><strong>Redis是如何使用epoll多路复用的？</strong></h2><h3 id="概念"><a href="#概念" class="headerlink" title="概念"></a>概念</h3><p>在进行解释之前，首先要说明几个概念：</p>
+<ul>
+<li>kernel</li>
+<li>用户空间和内核空间</li>
+<li>进程切换</li>
+<li>进程的阻塞</li>
+<li>文件描述符</li>
+<li>缓存 I/O</li>
+</ul>
+<p><strong>kernel</strong></p>
+<p>Linux内核可以看作一个服务进程(管理软硬件资源，响应用户进程的种种合理以及不合理的请求)。</p>
+<p>内核需要多个执行流并行，为了防止可能的阻塞，支持多线程是必要的。它运行在内存中的用户不可操作的区域。</p>
+<p><strong>用户空间和内核空间</strong></p>
+<p>操作系统的核心是内核，独立于普通的应用程序，可以访问受保护的内存空间，也有访问底层硬件设备的所有权限。为了保证用户进程不能直接操作内核（kernel），保证内核的安全，操心系统将虚拟空间划分为两部分，一部分为内核空间，一部分为用户空间。针对linux操作系统而言，将最高的1G字节（从虚拟地址0xC0000000到0xFFFFFFFF），供内核使用，称为内核空间，而将较低的3G字节（从虚拟地址0x00000000到0xBFFFFFFF），供各个进程使用，称为用户空间。</p>
+<p><strong>进程切换</strong></p>
+<p>为了控制进程的执行，内核必须有能力挂起正在CPU上运行的进程，并恢复以前挂起的某个进程的执行。这种行为被称为进程切换。因此可以说，任何进程都是在操作系统内核的支持下运行的，是与内核紧密相关的。</p>
+<p>从一个进程的运行转到另一个进程上运行，这个过程中经过下面这些变化：</p>
+<ol>
+<li><p>保存处理机上下文，包括程序计数器和其他寄存器。</p>
+</li>
+<li><p>更新PCB信息。</p>
+</li>
+<li><p>把进程的PCB移入相应的队列，如就绪、在某事件阻塞等队列。</p>
+</li>
+<li><p>选择另一个进程执行，并更新其PCB。</p>
+</li>
+<li><p>更新内存管理的数据结构。</p>
+</li>
+<li><p>恢复处理机上下文。</p>
+</li>
+</ol>
+<p>注：<strong>总而言之就是很耗资源</strong></p>
+<p><strong>进程的阻塞</strong></p>
+<p>正在执行的进程，由于期待的某些事件未发生，(accept、read)如请求系统资源失败、等待某种操作的完成、新数据尚未到达或无新工作做等，则由系统自动执行阻塞原语(Block)，使自己由运行状态变为阻塞状态。可见，进程的阻塞是进程自身的一种主动行为，也因此只有处于运行态的进程（获得CPU），才可能将其转为阻塞状态。<code>当进程进入阻塞状态，是不占用CPU资源的</code>。</p>
+<p><strong>文件描述符fd</strong></p>
+<p>文件描述符（File descriptor）是计算机科学中的一个术语，是一个用于表述指向文件的引用的抽象化概念。</p>
+<p>文件描述符在形式上是一个非负整数。实际上，它是一个索引值，指向内核为每一个进程所维护的该进程打开文件的记录表。当程序打开一个现有文件或者创建一个新文件时，内核向进程返回一个文件描述符。在程序设计中，一些涉及底层的程序编写往往会围绕着文件描述符展开。但是文件描述符这一概念往往只适用于UNIX、Linux这样的操作系统。</p>
+<p><strong>缓存IO</strong></p>
+<p>缓存 I/O 又被称作标准 I/O，大多数文件系统的默认 I/O 操作都是缓存 I/O。在 Linux 的缓存 I/O 机制中，操作系统会将 I/O 的数据缓存在文件系统的页缓存（ page cache ）中，也就是说，数据会先被拷贝到操作系统内核的缓冲区中，然后才会从操作系统内核的缓冲区拷贝到应用程序的地址空间。</p>
+<p><strong>系统方法<code>accept</code></strong></p>
+<p><code>accept</code>是阻塞的，它返回客户端的<code>socket</code>链接的文件描述符</p>
+<h3 id="Redis启动服务"><a href="#Redis启动服务" class="headerlink" title="Redis启动服务"></a>Redis启动服务</h3><ol>
+<li>调用系统方法<code>socket</code>,获取Redis服务的文件描述符，例如<code>fd6</code></li>
+<li>绑定端口号<code>bind 6379</code></li>
+<li>监听端口号<code>listen 6379</code></li>
+</ol>
+<h3 id="使用epoll多路复用"><a href="#使用epoll多路复用" class="headerlink" title="使用epoll多路复用"></a>使用epoll多路复用</h3><ol>
+<li>执行系统方法<code>epoll_create</code>方法，它返回一个文件描述符，例如<code>fd5</code>，它是在系统<code>kernel</code>中开辟的一个区域</li>
+<li>执行系统方法<code>epoll_ctl(fd5, fd6, accept)</code>，在<code>fd5</code>的区域中监听<code>fd6</code>(Redis服务)的<code>accept</code>事件。(因为<code>accept</code>是阻塞方法，不能在Redis里面使用，这样的话如果Redis只要等通知就可以，Redis不用做到阻塞)</li>
+<li>当内核中的<code>fd5</code>区域的文件描述符的事件被触发后，比如监听到了<code>fd6</code>的Redis服务事件<code>accept</code>，证明有了客户端连接，内核会把<code>fd6</code>描述符放入另外一个开辟的新空间</li>
+<li>Redis疯狂的执行系统方法<code>epoll_wait</code>得到<code>fd6</code></li>
+<li>Redis执行<code>accept(fd6)</code>，因为此时已经确定有客户端连接，调用会直接返回客户端的文件标识符，例如<code>fd9</code>；此时不会阻塞</li>
+<li>Redis执行系统方法<code>epoll_ctl(fd5, fd9, read)</code>，监听客户端<code>fd9</code>的数据事件(因为虽然建立了客户端连接，但不能保证它立马发数据，如果在Redis端执行read(fd9)，那么它又是一个阻塞事件，因为Redis是单线程，不能容忍它线程阻塞)</li>
+<li>当内核中的<code>fd5</code>区域的文件描述符的事件被触发后，比如监听到了<code>fd9</code>的事件<code>read</code>，证明有了客户端发送数据，内核会把<code>fd9</code>描述符放入另外一个开辟的新空间</li>
+<li>Redis疯狂的执行系统方法<code>epoll_wait</code>得到<code>fd9</code></li>
+<li>调用系统方法<code>read(fd9)</code>，这样就读取到了客户端的数据，而没有造成阻塞</li>
+</ol>
+<p>整个流程利用了内核的epoll方法，通过事件驱动实现了Redis的无阻塞</p>
+<hr>
+<p>简单来说，可以归为三步</p>
+<p><img src="https://i.loli.net/2020/05/10/VRXclgbYPotxK6N.png" alt="Snipaste_2020-05-10_12-03-58"></p>
+<ol>
+<li>创建epoll</li>
+<li>事件触发，读取</li>
+<li>redis内部处理数据</li>
+</ol>
+<p>以下引申出：<strong>Redis是单线程的(主 worker为单线程)，但在6.x版本IO Threads多线程(需要主动开启)</strong></p>
+<p>6.x版本中的IO Threads多线程是什么？</p>
+<p>这里Redis还是工作线程单线程(上面的第三步，处理数据)，但是在第二步骤从内核中IO读取为多线程，在第二步读取完之后，所任任务排好队，等待第三步的工作线程一一处理。所以Redis还是单线程。</p>
+<p>下面的图可以解释：</p>
+<p><img src="https://i.loli.net/2020/05/10/N6a7bQO1q3PR4hC.png" alt="Snipaste_2020-05-10_12-11-11"></p>
+<h2 id="Redis-zset结构"><a href="#Redis-zset结构" class="headerlink" title="Redis zset结构"></a>Redis zset结构</h2><p>zset特点：动态排序</p>
+<p>他是怎么排序的呢？</p>
+<p>数据小于64k时使用<code>ziplist</code></p>
+<p>数据大于64k时使用<code>skiplist</code></p>
+<p><code>skiplist</code>是跳跃表，本质是利用空间来节省时间(排序)</p>
+<p>如下图，在一个有序的集合中，每个集合元素都向上造层，第一个元素层最大为64，其余造层为随机造层(1-64)，同层相连如果某个元素此层没有则跳过它。</p>
+<p><img src="https://i.loli.net/2020/05/10/1ut8eiU7AkDMWXZ.png" alt="Snipaste_2020-05-10_12-45-44"></p>
+<ol>
+<li>30与首元素的最高层比较，大于它，应该往右走，因为右边是空，所以降层</li>
+<li>往右走之后发现比22大，应该往右走，因为右边是空，所以降层</li>
+<li>往右走发现比45小，它的位置就应该在22-45之间</li>
+<li>类推</li>
+</ol>
+<p>因为过程中跳过了元素7，所以称为跳表。</p>
+<h2 id="Redis持久化"><a href="#Redis持久化" class="headerlink" title="Redis持久化"></a>Redis持久化</h2><p>Redis为持久化提供了两种方式：</p>
+<ul>
+<li>RDB：在指定的时间间隔能对你的数据进行快照存储。</li>
+<li>AOF：记录每次对服务器写的操作,当服务器重启的时候会重新执行这些命令来恢复原始的数据。</li>
+</ul>
+<p>持久化为了解决数据丢失。</p>
+<p>Redis是默认开启RDB持久化，关闭AOF的。</p>
+<p>在Redis4.x以前，如果同时使用两种方式，在重启Redis后只会使用AOF方式。</p>
+<p>Redis4.x以后，如果同时使用两种方式，先对AOF文件进行重写，然后基于RDB快照进行AOF恢复。(混合持久化)</p>
+<p><strong>然后，什么是重写AOF呢？</strong></p>
+<p>这就提到了，如果Redis只使用AOF方式持久化，假设它运行了很久，这时AOF记录文件(此文件是追加内容)一定会很大，假设1T，那么重启Redis时，要执行这个1T文件内的所有命令，会很慢，但是AOF文件中应该是大部分已经失效的操作，这样很浪费。</p>
+<p>此时，提出了重写概念。先处理此文件，将失效操作抵消掉，然后恢复数据。</p>
+<h1 id="Redis集群"><a href="#Redis集群" class="headerlink" title="Redis集群"></a>Redis集群</h1><p>Redis可以认为是一个小程序时单机的，如果向让它做更重要的事情，单机是肯定不够的，肯定做成分布式的。</p>
+<p>既然Redis是单机的，它肯定会有单点故障、压力/性能问题。</p>
+<p>单点故障问题，我们可以使用<strong>主从复制集群</strong>来解决。</p>
+<p>压力/性能问题，我们可以通过<strong>分片集群</strong>来搞定。</p>
+<p>这两者的区别是数据的区别：</p>
+<ol>
+<li><strong>主从复制集群</strong>是因为单点不可靠出现的，集群中每个节点的数据是要同步的，全量的。</li>
+<li><strong>分片集群</strong>是因为数据太多一个节点存储不来，所以集群中节点数据相加才能得到全量数据。</li>
+</ol>
+<p>集群，肯定涉及到了分布式，这里引申出分布式的几个概念：</p>
+<ul>
+<li>CAP</li>
+<li>Paxos分布式协调技术</li>
+<li>数据一致性：强一致性、弱一致性、最终一致性</li>
+</ul>
+<h2 id="概念-1"><a href="#概念-1" class="headerlink" title="概念"></a>概念</h2><p><strong>CAP</strong></p>
+<p>2000 年 7 月，加州大学伯克利分校的 Eric Brewer 教授在 ACM PODC 会议上提出 CAP 猜想。2年后，麻省理工学院的 Seth Gilbert 和 Nancy Lynch 从理论上证明了 CAP。之后，CAP 理论正式成为分布式计算领域的公认定理。</p>
+<p>CAP 理论为：一个分布式系统最多只能同时满足一致性（Consistency）、可用性（Availability）和分区容错性（Partition tolerance）这三项中的两项。</p>
+<p>一致性（Consistency）</p>
+<p>一致性指 “all nodes see the same data at the same time”，即更新操作成功并返回客户端完成后，所有节点在同一时间的数据完全一致。</p>
+<p>可用性（Availability）</p>
+<p>可用性指“Reads and writes always succeed”，即服务一直可用，而且是正常响应时间。</p>
+<p>分区容错性（Partition tolerance）</p>
+<p>分区容错性指“the system continues to operate despite arbitrary message loss or failure of part of the system”，即分布式系统在遇到某节点或网络分区故障的时候，仍然能够对外提供满足一致性和可用性的服务。</p>
+<p><strong>Paxos</strong></p>
+<p>Paxos 是一种分布式共识算法，用于解决在异步通信网络中存在节点失效且本地存储可靠的情况下多个分布式节点达成一致的问题。它是一篇论文，所有的分布式协调技术都是使用它作为基础的。</p>
+<p>它里面有两个点：投票机制和过半同意机制。</p>
+<p>例如Zookeeper的ZAB、elasticSearch的raft就是这样实现的。</p>
+<p>投票机制：</p>
+<p>当集群内主节点挂掉之后，会触发投票，产生新得主节点。</p>
+<p>可以参考<a href="/2020/02/29/Zookeeper%E5%AE%9E%E8%B7%B5/" title="ZAB实现集群故障回复一节">ZAB实现集群故障回复一节</a>。</p>
+<p>过半同意机制：</p>
+<p>分布式协调技术也是基于集群的，集群中的各个节点都会相互通信的，它的集群也不可靠。可能会因为网络原因造成它的集群分散了(脑裂)，这时候他们各自对外提供服务，这样提供的数据就很不正确。所以集群分散后的每一个小组肯定知道与自己通信的有几个节点，如果这个小组节点数大于半数以上则继续提供服务，否则不提供服务，自主消亡。所以一般集群都是单数节点。因为3个节点半数以上是2；4个节点半数以上得是3。3-4的集群你多加了一个节点还是只能容忍一个节点不能提供服务，很亏。所以一般是单数节点的集群。</p>
+<p><strong>数据一致性</strong></p>
+<p>假设我们有一个三节点的Redis主从集群，客户端写入数据，肯定是先写在其中一个节点。</p>
+<p>如果使用强一致性：</p>
+<p>这一个节点将数据同步到其余两个节点中去，这个时间段内，集群不对外提供服务。这样因为CAP定理，强一致性为了保证数据一致性(C)破坏了可用性(A)。</p>
+<p>如果使用弱一致性：</p>
+<p>节点数据也会同步，但是不管成功/失败。如果失败的话，加入下一次读取时读取这些信息时，读到了别的节点，然后数据就是错误的。这样因为CAP定理，弱一致性为了保证可用性(A)破坏了数据一致性(C)。</p>
+<p>这时出现了最终一致性：(Redis这种第三方还没有出现，但是hadoop集群中有这种角色名为<code>JournalNode</code>，</p>
+<p><code>JournalNode</code>就是用了分布式协调技术)</p>
+<p>这一个节点将数据写入第三方，这个第三方需要保证(绝对可靠，不会挂，写入绝对成功)，这时继续提供服务，然后剩下的节点会从这个第三方拿取数据，这样能做到最终集群内的数据是一致的，符合CAP的AP。</p>
+<h2 id="主从复制集群"><a href="#主从复制集群" class="headerlink" title="主从复制集群"></a>主从复制集群</h2><p>主从复制集群的节点因为存储全量数据，所以要数据同步。这就涉及到了数据一致性问题。</p>
+<p>redis实现的是最终会一致性，具体选择强一致性还是弱一致性，取决于业务场景。</p>
+<p>主从复制集群，当主节点挂掉之后，需要手动将从节点设置为主节点。可以通过哨兵模式来解决</p>
+<h2 id="分片集群"><a href="#分片集群" class="headerlink" title="分片集群"></a>分片集群</h2><p><strong>分片集群</strong>是因为数据太多一个节点存储不来，所以集群中节点数据相加才能得到全量数据。</p>
+<p>在redis中，我们的应用在存取数据的时候需要根据一定的算法(一致性hash)进行计算和存取 ，那么在redis中如何实现数据分片的呢? 首先Redis至少存在三个数据分片，每个分片称为master，假设整个cluster有N个节点，那么每个节点都和其他N-1个节点保持连接和心跳，节点之间相互通信主要确认节点是否存活、节点的数据版本、投票选择新的master等</p>
+<p><img src="https://i.loli.net/2020/05/10/ETILnXYA2zQNUMk.jpg" alt="09f7141b213af64ebd17a36eeebb6b61"></p>
+<p>如何分片，有三种方式：</p>
+<ol>
+<li>由用户写算法，算法存在于客户端程序之中</li>
+<li>由第三方代理算法，起一个第三方线程</li>
+<li>Redis Cluster</li>
+</ol>
+<h3 id="用户写算法"><a href="#用户写算法" class="headerlink" title="用户写算法"></a>用户写算法</h3><p>缺点：占用客户端的cpu资源，jvm资源，同布更新算法麻烦。</p>
+<p>最终的集群结构大致如下：</p>
+<p><img src="https://i.loli.net/2020/05/10/DgMp5jrs1aqZb3e.jpg" alt="e42fe470d4bb59125b1f3fcecf65ce83"></p>
+<h3 id="代理算法"><a href="#代理算法" class="headerlink" title="代理算法"></a>代理算法</h3><p><strong>twemproxy处于客户端和服务器的中间，将客户端发来的请求，进行一定的处理后(如sharding)，再转发给后端真正的Redis服务器。也就是说，客户端不直接访问Redis服务器，而是通过twemproxy代理中间件间接访问。</strong></p>
+<p>参照Redis Sharding架构，增加代理中间件的Redis集群架构如下：</p>
+<p>twemproxy中间件的内部处理是无状态的，它本身可以很轻松地集群，这样可避免单点压力或故障。</p>
+<p>twemproxy又叫nutcracker，起源于twitter系统中redis/memcached集群开发实践，运行效果良好，后代码奉献给开源社区。其轻量高效，采用<a target="_blank" rel="noopener" href="http://lib.csdn.net/base/c"><strong>C语言</strong></a>开发，工程网址是：<a href="http://blog.csdn.net/link.zhihu.com/?target=https://github.com/twitter/twemproxy">GitHub - twitter/twemproxy: A fast, light-weight proxy for memcached and redis</a></p>
+<p>twemproxy后端不仅支持redis，同时也支持memcached，这是twitter<a target="_blank" rel="noopener" href="http://www.2cto.com/os/">系统</a>具体环境造成的。</p>
+<p>由于使用了中间件，twemproxy可以通过共享与后端系统的连接，降低客户端直接连接后端服务器的连接数量。同时，它也提供sharding功能，支持后端服务器集群水平扩展。统一运维管理也带来了方便。</p>
+<p>当然，也是由于使用了中间件代理，相比客户端直连服务器方式，性能上会有所损耗，实测结果大约降低了20%左右。</p>
+<p><img src="https://i.loli.net/2020/05/10/ufVhtCSU9vWY8Jk.png" alt="20191018230035839"></p>
+<h3 id="Redis-Cluster"><a href="#Redis-Cluster" class="headerlink" title="Redis Cluster"></a>Redis Cluster</h3><p>Redis Cluster是一种服务器Sharding技术，3.0版本开始正式提供。Redis Cluster中，Sharding采用<strong>slot(槽)的概念，一共分成16384个槽，这有点儿类似前面讲的pre sharding思路。对于每个进入Redis的键值对，根据key进行散列，分配到这16384个slot中的某一个中。使用的hash<a target="_blank" rel="noopener" href="http://lib.csdn.net/base/datastructure">算法</a>也比较简单，就是\</strong>CRC16后16384取模。Redis集群中的每个node(节点)负责分摊这16384个slot中的一部分，也就是说，每个slot都对应一个node负责处理。当动态添加或减少node节点时，需要将16384个槽做个再分配，槽中的键值也要迁移。当然，这一过程，在目前实现中，还处于半自动状态，需要人工介入。****</p>
+<p>Redis集群，要保证16384个槽对应的node都正常工作，如果某个node发生故障，那它负责的slots也就失效，整个集群将不能工作。为了增加集群的可访问性，官方推荐的方案是将node配置成主从结构，即一个master主节点，挂n个slave从节点。这时，如果主节点失效，Redis Cluster会根据选举算法从slave节点中选择一个上升为主节点，整个集群继续对外提供服务。这非常类似服务器节点通过Sentinel监控架构成主从结构，只是Redis Cluster本身提供了故障转移容错的能力。</p>
+<p>Redis Cluster的新节点识别能力、故障判断及故障转移能力是通过集群中的每个node都在和其它nodes进行通信，这被称为集群总线(cluster bus)。它们使用特殊的端口号，即对外服务端口号加10000。例如如果某个node的端口号是6379，那么它与其它nodes通信的端口号是16379。nodes之间的通信采用特殊的二进制协议。</p>
+<p>对客户端来说，整个cluster被看做是一个整体，客户端可以连接任意一个node进行操作，就像操作单一Redis实例一样，当客户端操作的key没有分配到该node上时，就像操作单一Redis实例一样，当客户端操作的key没有分配到该node上时，Redis会返回转向指令，指向正确的node，这有点儿像浏览器页面的302 redirect跳转。</p>
+<p>Redis Cluster是Redis 3.0以后才正式推出，时间较晚，目前能证明在大规模生产环境下成功的案例还不是很多，需要时间检验。</p>
+<h1 id="结束"><a href="#结束" class="headerlink" title="结束"></a>结束</h1><p>上面描述的分片集群方案只是随口一说，具体没说。</p>
+<p>因为分片集群每个节点的数据都没有备份，最好结合主从复制集群来使用。</p>
+<p>搭建可以仿照</p>
+<p><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/1IYPmrq-PccmcVmA9_h3yg">https://mp.weixin.qq.com/s/1IYPmrq-PccmcVmA9_h3yg</a></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">Xiangjie</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://awslzhang.top/2020/05/07/Redis%E7%90%90%E7%A2%8E%E7%9F%A5%E8%AF%86%E7%82%B9/">https://awslzhang.top/2020/05/07/Redis%E7%90%90%E7%A2%8E%E7%9F%A5%E8%AF%86%E7%82%B9/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://awslzhang.top" target="_blank">zxj</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"></div><div class="post_share"><div class="social-share" data-image="https://i.loli.net/2020/06/09/bp9DlYjrGi2q8oE.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2020/05/23/%E8%AE%B0%E4%B8%80%E6%AC%A1%E8%B0%83%E7%94%A8FFmpeg%E5%A4%84%E7%90%86%E8%A7%86%E9%A2%91/"><img class="prev-cover" src="https://i.loli.net/2020/06/09/RO5Fb9ac84fBIlJ.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">记一次调用FFmpeg处理视频</div></div></a></div><div class="next-post pull-right"><a href="/2020/05/05/Ubuntu%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/"><img class="next-cover" src="https://i.loli.net/2020/06/09/FTdvZibCHxm4KVw.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Ubuntu常用操作</div></div></a></div></nav></div><div class="aside_content" id="aside_content"><div class="card-widget card-info"><div class="card-content"><div class="card-info-avatar is-center"><img class="avatar-img" src="/null" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">Xiangjie</div><div class="author-info__description"></div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/XiangJie-Zhang" target="_blank" title="Github"><i class="fab fa-github"></i></a><a class="social-icon" href="mailto:qluzxj@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a></div></div></div><div class="card-widget card-announcement"><div class="card-content"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Redis%E7%9A%84%E5%89%8D%E4%B8%96%E4%BB%8A%E7%94%9F"><span class="toc-number">1.</span> <span class="toc-text">Redis的前世今生</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%86%85%E5%AD%98%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E7%A7%8D%E7%B1%BB"><span class="toc-number">2.</span> <span class="toc-text">内存数据库的种类</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Redis%E4%B8%8EMemcached%E5%AF%B9%E6%AF%94"><span class="toc-number">2.1.</span> <span class="toc-text">Redis与Memcached对比</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Redis"><span class="toc-number">3.</span> <span class="toc-text">Redis</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Redis%E7%9A%84%E4%BA%94%E7%A7%8D%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="toc-number">3.1.</span> <span class="toc-text">Redis的五种数据结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Redis%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%BF%E7%94%A8%E5%8D%95%E7%BA%BF%E7%A8%8B"><span class="toc-number">3.2.</span> <span class="toc-text">Redis为什么使用单线程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Redis%E6%98%AF%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8epoll%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8%E7%9A%84%EF%BC%9F"><span class="toc-number">3.3.</span> <span class="toc-text">Redis是如何使用epoll多路复用的？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%A6%82%E5%BF%B5"><span class="toc-number">3.3.1.</span> <span class="toc-text">概念</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Redis%E5%90%AF%E5%8A%A8%E6%9C%8D%E5%8A%A1"><span class="toc-number">3.3.2.</span> <span class="toc-text">Redis启动服务</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BD%BF%E7%94%A8epoll%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8"><span class="toc-number">3.3.3.</span> <span class="toc-text">使用epoll多路复用</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Redis-zset%E7%BB%93%E6%9E%84"><span class="toc-number">3.4.</span> <span class="toc-text">Redis zset结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Redis%E6%8C%81%E4%B9%85%E5%8C%96"><span class="toc-number">3.5.</span> <span class="toc-text">Redis持久化</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Redis%E9%9B%86%E7%BE%A4"><span class="toc-number">4.</span> <span class="toc-text">Redis集群</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%A6%82%E5%BF%B5-1"><span class="toc-number">4.1.</span> <span class="toc-text">概念</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E9%9B%86%E7%BE%A4"><span class="toc-number">4.2.</span> <span class="toc-text">主从复制集群</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%86%E7%89%87%E9%9B%86%E7%BE%A4"><span class="toc-number">4.3.</span> <span class="toc-text">分片集群</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%94%A8%E6%88%B7%E5%86%99%E7%AE%97%E6%B3%95"><span class="toc-number">4.3.1.</span> <span class="toc-text">用户写算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BB%A3%E7%90%86%E7%AE%97%E6%B3%95"><span class="toc-number">4.3.2.</span> <span class="toc-text">代理算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Redis-Cluster"><span class="toc-number">4.3.3.</span> <span class="toc-text">Redis Cluster</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%BB%93%E6%9D%9F"><span class="toc-number">5.</span> <span class="toc-text">结束</span></a></li></ol></div></div></div><div class="card-widget card-recent-post"><div class="card-content"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink的时间语义和watermark"/></a><div class="content"><a class="title" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark">Flink的时间语义和watermark</a><time datetime="2020-12-23T10:59:07.000Z" title="发表于 2020-12-23 18:59:07">2020-12-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/Flink-API/" title="Flink Api学习"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Api学习"/></a><div class="content"><a class="title" href="/2020/12/17/Flink-API/" title="Flink Api学习">Flink Api学习</a><time datetime="2020-12-17T12:36:28.000Z" title="发表于 2020-12-17 20:36:28">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/ready/" title="ready!"><img src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="ready!"/></a><div class="content"><a class="title" href="/2020/12/17/ready/" title="ready!">ready!</a><time datetime="2020-12-16T16:02:06.000Z" title="发表于 2020-12-17 00:02:06">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink学习笔记"/></a><div class="content"><a class="title" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记">Flink学习笔记</a><time datetime="2020-12-16T12:29:56.000Z" title="发表于 2020-12-16 20:29:56">2020-12-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目"><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/下载.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="k8s集群监控、高可用以及部署自建Java项目"/></a><div class="content"><a class="title" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目">k8s集群监控、高可用以及部署自建Java项目</a><time datetime="2020-12-06T01:26:41.000Z" title="发表于 2020-12-06 09:26:41">2020-12-06</time></div></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By Xiangjie</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><canvas class="fireworks" mobile="false"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script></div></body></html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Docker网络 | zxj</title><meta name="keywords" content="Docker"><meta name="author" content="Xiangjie"><meta name="copyright" content="Xiangjie"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="Docker网络 Docker 允许通过外部访问容器或容器互联的方式来提供网络服务。  外部访问容器容器中可以运行一些网络应用，要让外部也可以访问这些应用，可以通过 -P 或 -p 参数来指定端口映射。  当使用 -P 标记时，Docker 会随机映射一个端口到**内部容器开放的网络端口(EXPOSE的端口)**。 当使用-p标记时，需要同时指定宿主机端口与容器端口之间的对应关系。  1$ doc">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Docker网络">
+<meta property="og:url" content="https://awslzhang.top/2020/11/13/Docker%E7%BD%91%E7%BB%9C/index.html">
+<meta property="og:site_name" content="zxj">
+<meta property="og:description" content="Docker网络 Docker 允许通过外部访问容器或容器互联的方式来提供网络服务。  外部访问容器容器中可以运行一些网络应用，要让外部也可以访问这些应用，可以通过 -P 或 -p 参数来指定端口映射。  当使用 -P 标记时，Docker 会随机映射一个端口到**内部容器开放的网络端口(EXPOSE的端口)**。 当使用-p标记时，需要同时指定宿主机端口与容器端口之间的对应关系。  1$ doc">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/下载.jpg">
+<meta property="article:published_time" content="2020-11-13T11:35:04.000Z">
+<meta property="article:modified_time" content="2021-01-01T05:49:59.917Z">
+<meta property="article:author" content="Xiangjie">
+<meta property="article:tag" content="Docker">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/下载.jpg"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://awslzhang.top/2020/11/13/Docker%E7%BD%91%E7%BB%9C/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: Xiangjie","link":"链接: ","source":"来源: zxj","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: {"chs_to_cht":"你已切换为繁体","cht_to_chs":"你已切换为简体","day_to_night":"你已切换为深色模式","night_to_day":"你已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#121212","position":"bottom-left"},
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: true,
+  isToc: true,
+  postUpdate: '2021-01-01 13:49:59'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.0.2"><link rel="alternate" href="/atom.xml" title="zxj" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/下载.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">zxj</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Docker网络</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-11-13T11:35:04.000Z" title="发表于 2020-11-13 19:35:04">2020-11-13</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-01-01T05:49:59.917Z" title="更新于 2021-01-01 13:49:59">2021-01-01</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Docker/">Docker</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">2.7k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>11分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="Docker网络"><a href="#Docker网络" class="headerlink" title="Docker网络"></a>Docker网络</h1><blockquote>
+<p>Docker 允许通过外部访问容器或容器互联的方式来提供网络服务。</p>
+</blockquote>
+<h2 id="外部访问容器"><a href="#外部访问容器" class="headerlink" title="外部访问容器"></a>外部访问容器</h2><p>容器中可以运行一些网络应用，要让外部也可以访问这些应用，可以通过 <code>-P</code> 或 <code>-p</code> 参数来指定端口映射。</p>
+<ul>
+<li>当使用 <code>-P</code> 标记时，Docker 会随机映射一个端口到<font color="red">**内部容器开放的网络端口(EXPOSE的端口)**。</font></li>
+<li>当使用<code>-p</code>标记时，需要同时指定宿主机端口与容器端口之间的对应关系。</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ docker run -d -P nginx</span><br></pre></td></tr></table></figure>
+
+<p>使用 <code>docker container ls</code> 可以看到，本地主机的 32769被映射到了容器的 80 端口。此时访问本机的 32769端口即可访问容器内 NGINX 默认页面。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ docker container ls</span><br><span class="line">CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                   NAMES</span><br><span class="line">3dda28d1a931        nginx               <span class="string">&quot;/docker-entrypoint.…&quot;</span>   24 seconds ago      Up 23 seconds       0.0.0.0:32769-&gt;80/tcp   romantic_volhard</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p><code>-p</code> 则可以指定要映射的端口，并且，在一个指定端口上只可以绑定一个容器。支持的格式有 :</p>
+</blockquote>
+<ul>
+<li><code>ip:hostPort:containerPort </code>：映射到指定地址的指定端口</li>
+<li><code>ip::containerPort</code>：映射所有接口地址</li>
+<li><code>hostPort:containerPort</code>：映射到指定地址的任意端口</li>
+</ul>
+<h3 id="指定映射分类"><a href="#指定映射分类" class="headerlink" title="指定映射分类"></a>指定映射分类</h3><h4 id="映射所有接口地址"><a href="#映射所有接口地址" class="headerlink" title="映射所有接口地址"></a>映射所有接口地址</h4><p>使用 <code>hostPort:containerPort</code> 格式本地的 80 端口映射到容器的 80 端口，可以执行</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ docker run -d -p 80:80 nginx:alpine</span><br></pre></td></tr></table></figure>
+
+<p>此时默认会绑定本地所有接口上的所有地址。</p>
+<h4 id="映射到指定地址的指定端口"><a href="#映射到指定地址的指定端口" class="headerlink" title="映射到指定地址的指定端口"></a>映射到指定地址的指定端口</h4><p>可以使用 <code>ip:hostPort:containerPort</code> 格式指定映射使用一个特定地址，比如 localhost 地址 127.0.0.1</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ docker run -d -p 127.0.0.1:80:80 nginx:alpine</span><br></pre></td></tr></table></figure>
+
+<h4 id="映射到指定地址的任意端口"><a href="#映射到指定地址的任意端口" class="headerlink" title="映射到指定地址的任意端口"></a>映射到指定地址的任意端口</h4><p>使用 <code>ip::containerPort</code> 绑定 localhost 的任意端口到容器的 80 端口，本地主机会自动分配一个端口。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ docker run -d -p 127.0.0.1::80 nginx:alpine</span><br></pre></td></tr></table></figure>
+
+<p>还可以使用 <code>udp</code> 标记来指定 <code>udp</code> 端口</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ docker run -d -p 127.0.0.1:80:80/udp nginx:alpine</span><br></pre></td></tr></table></figure>
+
+<p><strong>这里提到了UDP端口号，特此说明TCP、UDP都有端口号并互不影响。</strong></p>
+<blockquote>
+<p> 顺便提出端口号的范围可分为三种：</p>
+<ul>
+<li>Well-Known Ports（即公认端口号）：知名端口号的范围是：0-1023</li>
+<li>Registered Ports（即注册端口）：注册端口号的范围是：1024-49151</li>
+<li>Dynamic, private or ephemeral ports（即动态、私有或临时端口号）：这一段的范围是：49152–65535</li>
+</ul>
+</blockquote>
+<h3 id="查看映射端口配置"><a href="#查看映射端口配置" class="headerlink" title="查看映射端口配置"></a>查看映射端口配置</h3><p>使用 <code>docker port</code> 来查看当前映射的端口配置，也可以查看到绑定的地址</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ docker port containerId</span><br><span class="line">80/tcp -&gt; 0.0.0.0:80</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>注意：</p>
+<ul>
+<li>容器有自己的内部网络和 ip 地址（使用 <code>docker inspect</code> 查看，Docker 还可以有一个可变的网络配置。）</li>
+<li><code>-p</code> 标记可以多次使用来绑定多个端口</li>
+</ul>
+</blockquote>
+<p>例如：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ docker run -d \</span><br><span class="line">-p 80:80 \</span><br><span class="line">-p 443:443 \</span><br><span class="line">nginx:alpine</span><br></pre></td></tr></table></figure>
+
+<h2 id="容器互联"><a href="#容器互联" class="headerlink" title="容器互联"></a>容器互联</h2><p>如果你之前有 <code>Docker</code> 使用经验，你可能已经习惯了使用 <code>--link</code> 参数来使容器互联。</p>
+<p><code>--link</code>方式使容器互联需要对双方容器都做出限制，不好操作。</p>
+<p>随着 Docker 网络的完善，强烈建议大家将容器加入<font color="red"><strong>自定义的 Docker 网络来连接多个容器</strong></font>，而不是使用 <code>--link</code> 参数。</p>
+<h3 id="新建网络"><a href="#新建网络" class="headerlink" title="新建网络"></a>新建网络</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ docker network create -d bridge my-net</span><br></pre></td></tr></table></figure>
+
+<p><code>-d</code> 参数指定 Docker 网络类型，有 <code>bridge</code> <code>overlay</code>。其中 <code>overlay</code> 网络类型用于 <a href="">Swarm mode</a>，在本小节中你可以忽略它。</p>
+<h3 id="连接容器"><a href="#连接容器" class="headerlink" title="连接容器"></a>连接容器</h3><p>运行一个容器并连接到新建的 <code>my-net</code> 网络</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ docker run -it --rm --name busybox1 --network my-net busybox sh</span><br></pre></td></tr></table></figure>
+
+<p>打开新的终端，再运行一个容器并加入到 <code>my-net</code> 网络</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ docker run -it --rm --name busybox2 --network my-net busybox sh</span><br></pre></td></tr></table></figure>
+
+<p>再打开一个新的终端查看容器信息</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ docker container ls</span><br><span class="line">CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMESb47060aca56b        busybox             <span class="string">&quot;sh&quot;</span>                11 minutes ago      Up 11 minutes                           busybox28720575823ec        busybox             <span class="string">&quot;sh&quot;</span>                16 minutes ago      Up 16 minutes                           busybox1</span><br></pre></td></tr></table></figure>
+
+<p>下面通过 <code>ping</code> 来证明 <code>busybox1</code> 容器和 <code>busybox2</code> 容器建立了互联关系。</p>
+<p>在 <code>busybox1</code> 容器输入以下命令</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">/ <span class="comment"># ping busybox2</span></span><br><span class="line">PING busybox2 (172.19.0.3): 56 data bytes</span><br><span class="line">64 bytes from 172.19.0.3: seq=0 ttl=64 time=0.072 ms</span><br><span class="line">64 bytes from 172.19.0.3: seq=1 ttl=64 time=0.118 ms</span><br></pre></td></tr></table></figure>
+
+<p>用 ping 来测试连接 <code>busybox2</code> 容器，它会解析成 <code>172.19.0.3</code>。</p>
+<p>同理在 <code>busybox2</code> 容器执行 <code>ping busybox1</code>，也会成功连接到。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">/ <span class="comment"># ping busybox1</span></span><br><span class="line">PING busybox1 (172.19.0.2): 56 data bytes</span><br><span class="line">64 bytes from 172.19.0.2: seq=0 ttl=64 time=0.064 ms</span><br><span class="line">64 bytes from 172.19.0.2: seq=1 ttl=64 time=0.143 ms</span><br></pre></td></tr></table></figure>
+
+<p>这样，<code>busybox1</code> 容器和 <code>busybox2</code> 容器建立了互联关系。</p>
+<h2 id="Docker-Compose"><a href="#Docker-Compose" class="headerlink" title="Docker Compose"></a>Docker Compose</h2><p>如果你有多个容器之间需要互相连接，推荐使用Docker Compose</p>
+<hr>
+<h1 id="高级网络配置"><a href="#高级网络配置" class="headerlink" title="高级网络配置"></a>高级网络配置</h1><p>当 Docker 启动时，会自动在主机上创建一个 <code>docker0</code> 虚拟网桥，实际上是 Linux 的一个 bridge，可以理解为一个软件交换机，<font color="red">所有不指定网络的容器都会使用此网卡（默认网卡）</font>。它会在挂载到它的网口之间进行转发。</p>
+<p>同时，Docker 随机分配一个本地未占用的私有网段（在 <a target="_blank" rel="noopener" href="https://tools.ietf.org/html/rfc1918">RFC1918</a> 中定义）中的一个地址给 <code>docker0</code> 接口。比如典型的 <code>172.17.42.1/16</code>，掩码为 <code>255.255.0.0</code>。此后启动的容器内的网口也会自动分配一个同一网段（<code>172.17.0.0/16</code>）的地址。</p>
+<blockquote>
+<p><strong>注意</strong>：默认的<code>docker0</code>网络和自定义网络有一点不同，使用<code>docker0</code>网卡的容器不能实现互联。</p>
+</blockquote>
+<p>当创建一个 Docker 容器的时候，同时会创建了一对 <code>veth pair</code> 接口（当数据包发送到一个接口时，另外一个接口也可以收到相同的数据包）。这对接口一端在容器内，即 <code>eth0</code>；另一端在本地并被挂载到 <code>docker0</code> 网桥，名称以 <code>veth</code> 开头（例如 <code>vethAQI2QT</code>）。通过这种方式，主机可以跟容器通信，容器之间也可以相互通信。Docker 就创建了在主机和所有容器之间一个虚拟共享网络。</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/hostos.png"></p>
+<p>接下来的部分将介绍在一些场景中，Docker 所有的网络定制配置。以及通过 Linux 命令来调整、补充、甚至替换 Docker 默认的网络配置。</p>
+<h2 id="快速配置指南"><a href="#快速配置指南" class="headerlink" title="快速配置指南"></a>快速配置指南</h2><p>最后这些选项只有在 <code>docker run</code> 执行时使用，因为它是针对容器的特性内容。</p>
+<ul>
+<li><code>-h HOSTNAME</code> 或 <code>--hostname=HOSTNAME</code> 配置容器主机名</li>
+<li><del><code>--link=CONTAINER_NAME:ALIAS</code> 添加到另一个容器的连接</del></li>
+<li><code>--net=bridge|none|container:NAME_or_ID|host</code> 配置容器的桥接模式</li>
+<li><code>-p SPEC</code> 或 <code>--publish=SPEC</code> 映射容器端口到宿主主机</li>
+<li><code>-P or --publish-all=true|false</code> 映射容器所有端口到宿主主机</li>
+</ul>
+<h2 id="例子"><a href="#例子" class="headerlink" title="例子"></a>例子</h2><p><strong>创建网络</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ docker network create -d bridge --subnet 172.11.0.0/16 --gateway 172.11.0.1 mynet</span><br><span class="line">6ca441ff474f979f493774cf0c3c7379d5da03655e4da14bb8b5d80fe3e98d37</span><br></pre></td></tr></table></figure>
+
+<p><strong>创建2个使用<code>mynet</code>的容器</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ docker run -d --name tomcat-mynet-1 --network=mynet tomcat</span><br><span class="line">89a4b49863d4bcd4468a32105df3f8e6f0cec529bcad12264b17a18e636dc8ed</span><br><span class="line">$ docker run -d --name tomcat-mynet-2 --network=mynet tomcat</span><br><span class="line">e594cdd21b422b85306cca3389ca56610dd812a78f02b9977e6d022fcfd792e2</span><br></pre></td></tr></table></figure>
+
+<p><strong>查看<code>mynet</code>网络的使用情况</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ docker network inspect mynet</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">&quot;Containers&quot;: &#123;</span><br><span class="line">    &quot;39483e5272d244662e19aab9a5acaf4f935de7d4e123295c1a114629fbc2837b&quot;: &#123;</span><br><span class="line">        &quot;Name&quot;: &quot;tomcat-mynet-2&quot;,</span><br><span class="line">        &quot;EndpointID&quot;: &quot;868c73cf8b7b734a65837bf6eb6ed197c98a68b416f91ce7c2e7ea8f24cbba8d&quot;,</span><br><span class="line">        &quot;MacAddress&quot;: &quot;02:42:ac:0b:00:02&quot;,</span><br><span class="line">        &quot;IPv4Address&quot;: &quot;172.11.0.2/16&quot;,</span><br><span class="line">        &quot;IPv6Address&quot;: &quot;&quot;</span><br><span class="line">    &#125;,</span><br><span class="line">    &quot;97cf9d5c3505d68546db70b67c65923103a05818243b00b6409f462515200136&quot;: &#123;</span><br><span class="line">        &quot;Name&quot;: &quot;tomcat-mynet-1&quot;,</span><br><span class="line">        &quot;EndpointID&quot;: &quot;bf315a5c26ab09131c88acefb291652c507b8c04d51e678d7370e108771eec55&quot;,</span><br><span class="line">        &quot;MacAddress&quot;: &quot;02:42:ac:0b:00:03&quot;,</span><br><span class="line">        &quot;IPv4Address&quot;: &quot;172.11.0.3/16&quot;,</span><br><span class="line">        &quot;IPv6Address&quot;: &quot;&quot;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>测试自定义网络的容器互联</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">$ docker <span class="built_in">exec</span> -it tomcat-mynet-1 ping tomcat-mynet-2</span><br><span class="line">PING tomcat-mynet-2 (172.11.0.2) 56(84) bytes of data.</span><br><span class="line">64 bytes from tomcat-mynet-2.mynet (172.11.0.2): icmp_seq=1 ttl=64 time=0.096 ms</span><br><span class="line">64 bytes from tomcat-mynet-2.mynet (172.11.0.2): icmp_seq=2 ttl=64 time=0.094 ms</span><br><span class="line">64 bytes from tomcat-mynet-2.mynet (172.11.0.2): icmp_seq=3 ttl=64 time=0.077 ms</span><br><span class="line">^C</span><br><span class="line">--- tomcat-mynet-2 ping statistics ---</span><br><span class="line">3 packets transmitted, 3 received, 0% packet loss, time 31ms</span><br><span class="line">rtt min/avg/max/mdev = 0.077/0.089/0.096/0.008 ms</span><br><span class="line">$ docker <span class="built_in">exec</span> -it tomcat-mynet-2 ping tomcat-mynet-1</span><br><span class="line">PING tomcat-mynet-1 (172.11.0.3) 56(84) bytes of data.</span><br><span class="line">64 bytes from tomcat-mynet-1.mynet (172.11.0.3): icmp_seq=1 ttl=64 time=0.092 ms</span><br><span class="line">64 bytes from tomcat-mynet-1.mynet (172.11.0.3): icmp_seq=2 ttl=64 time=0.080 ms</span><br><span class="line">64 bytes from tomcat-mynet-1.mynet (172.11.0.3): icmp_seq=3 ttl=64 time=0.072 ms</span><br><span class="line">^C</span><br><span class="line">--- tomcat-mynet-1 ping statistics ---</span><br><span class="line">3 packets transmitted, 3 received, 0% packet loss, time 38ms</span><br><span class="line">rtt min/avg/max/mdev = 0.072/0.081/0.092/0.011 ms</span><br></pre></td></tr></table></figure>
+
+<p><strong>创建使用默认网络的容器</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ docker run -d --name tomcat-docker0 tomcat</span><br><span class="line">e8408dbf5c1e3ddbe0adfee16ab9c8965f9889c55299e50ce1db381401f26c2a</span><br></pre></td></tr></table></figure>
+
+<p><strong>测试不同网络的容器的连通性</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ docker <span class="built_in">exec</span> -it tomcat-mynet-1 ping tomcat-docker0</span><br><span class="line">ping: tomcat-docker0: Name or service not known</span><br></pre></td></tr></table></figure>
+
+<p>发现不同网络内的容器并不相通。这是为什么呢，看下图：</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/Snipaste_2020-11-08_16-39-40.png" alt="Snipaste_2020-11-08_16-39-40"></p>
+<h3 id="网络打通"><a href="#网络打通" class="headerlink" title="网络打通"></a>网络打通</h3><p>解决办法：</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/Snipaste_2020-11-08_16-41-09.png" alt="Snipaste_2020-11-08_16-41-09"></p>
+<p>原理：假如使<code>tomcat-mynet-1</code>连接到<code>tomcat-docker0</code>，则在<code>tomcat-mynet-1</code>已有网络的基础上再次添加一个docker0网络的IP。<font color="red"><strong>即一个容器多个IP</strong></font></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ docker network  connect bridge tomcat-mynet-1</span><br></pre></td></tr></table></figure>
+
+<p>此时我们查看<code>tomcat-mynet-1</code>的网络信息：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ docker inspect tomcat-mynet-1</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">&quot;Networks&quot;: &#123;</span><br><span class="line">               &quot;bridge&quot;: &#123;</span><br><span class="line">                   &quot;IPAMConfig&quot;: &#123;&#125;,</span><br><span class="line">                   &quot;Links&quot;: null,</span><br><span class="line">                   &quot;Aliases&quot;: [],</span><br><span class="line">                   &quot;NetworkID&quot;: &quot;fe5399aad1b445bf0dce36a7ed705e597714226a4872986a49a70aea9443e795&quot;,</span><br><span class="line">                   &quot;EndpointID&quot;: &quot;4781b0bb8330308ba0c4d2e64c11edd29ab03cc8d0afadcca0ae3279af7b95a3&quot;,</span><br><span class="line">                   &quot;Gateway&quot;: &quot;172.17.0.1&quot;,</span><br><span class="line">                   &quot;IPAddress&quot;: &quot;172.17.0.3&quot;,</span><br><span class="line">                   &quot;IPPrefixLen&quot;: 16,</span><br><span class="line">                   &quot;IPv6Gateway&quot;: &quot;&quot;,</span><br><span class="line">                   &quot;GlobalIPv6Address&quot;: &quot;&quot;,</span><br><span class="line">                   &quot;GlobalIPv6PrefixLen&quot;: 0,</span><br><span class="line">                   &quot;MacAddress&quot;: &quot;02:42:ac:11:00:03&quot;,</span><br><span class="line">                   &quot;DriverOpts&quot;: &#123;&#125;</span><br><span class="line">               &#125;,</span><br><span class="line">               &quot;mynet&quot;: &#123;</span><br><span class="line">                   &quot;IPAMConfig&quot;: null,</span><br><span class="line">                   &quot;Links&quot;: null,</span><br><span class="line">                   &quot;Aliases&quot;: [</span><br><span class="line">                       &quot;97cf9d5c3505&quot;</span><br><span class="line">                   ],</span><br><span class="line">                   &quot;NetworkID&quot;: &quot;b2c091bf96ebf3ea4ff0ed3427d36b83c31632d8b52aaf2b67afda26b2c54a5f&quot;,</span><br><span class="line">                   &quot;EndpointID&quot;: &quot;bf315a5c26ab09131c88acefb291652c507b8c04d51e678d7370e108771eec55&quot;,</span><br><span class="line">                   &quot;Gateway&quot;: &quot;172.11.0.1&quot;,</span><br><span class="line">                   &quot;IPAddress&quot;: &quot;172.11.0.3&quot;,</span><br><span class="line">                   &quot;IPPrefixLen&quot;: 16,</span><br><span class="line">                   &quot;IPv6Gateway&quot;: &quot;&quot;,</span><br><span class="line">                   &quot;GlobalIPv6Address&quot;: &quot;&quot;,</span><br><span class="line">                   &quot;GlobalIPv6PrefixLen&quot;: 0,</span><br><span class="line">                   &quot;MacAddress&quot;: &quot;02:42:ac:0b:00:03&quot;,</span><br><span class="line">                   &quot;DriverOpts&quot;: null</span><br><span class="line">               &#125;</span><br><span class="line">           &#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>发现此容器同时有2个IP：</p>
+<ul>
+<li>172.11.0.3</li>
+<li>172.17.0.3</li>
+</ul>
+<p><del>正因为它也在网络<code>bridge</code>中，所以它能连通<code>tomcat-docker0</code></del>，发现也连不通，才想到默认网卡docker0==bridge是容器互联不支持的。</p>
+<p>以下新建一个网络<code>mynet1</code>，创建容器<code>tomcat-mynet1-1</code>，并将容器<code>tomcat-mynet-1</code>加入网络<code>mynet1</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$ docker network create --subnet 172.13.0.0 --gateway 172.13.0.1 mynet1</span><br><span class="line">invalid subnet: invalid CIDR address: 172.13.0.0</span><br><span class="line">$ docker network create --subnet 172.13.0.0/16 --gateway 172.13.0.1 mynet1</span><br><span class="line">00e7d460e27849646a4be5fe5f2773ac698f014377391ccb3a8ea637f09c3e49</span><br><span class="line">$ docker run --name tomcat-mynet1-1 -d --network=mynet1 tomcat</span><br><span class="line">219598c82425458a509294e3efdc5d4f1ac8088ae8edbcc67297da641cfe138e</span><br><span class="line">$ docker network connect mynet1 tomcat-mynet-1</span><br></pre></td></tr></table></figure>
+
+<p><font color="red"><strong>测试网络打通</strong></font></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">$ docker <span class="built_in">exec</span> -it tomcat-mynet-1 ping tomcat-mynet1-1</span><br><span class="line">PING tomcat-mynet1-1 (172.13.0.2) 56(84) bytes of data.</span><br><span class="line">64 bytes from tomcat-mynet1-1.mynet1 (172.13.0.2): icmp_seq=1 ttl=64 time=0.140 ms</span><br><span class="line">64 bytes from tomcat-mynet1-1.mynet1 (172.13.0.2): icmp_seq=2 ttl=64 time=0.081 ms</span><br><span class="line">^C</span><br><span class="line">--- tomcat-mynet1-1 ping statistics ---</span><br><span class="line">2 packets transmitted, 2 received, 0% packet loss, time 5ms</span><br><span class="line">rtt min/avg/max/mdev = 0.081/0.110/0.140/0.031 ms</span><br><span class="line">$ docker <span class="built_in">exec</span> -it tomcat-mynet-2 ping tomcat-mynet1-1</span><br><span class="line">ping: tomcat-mynet1-1: Name or service not known</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>结论：发现配置了网络<code>mynet1</code>的容器<code>tomcat-mynet-1</code>能连通<code>tomcat-mynet1-1</code>，而没有打通网络的容器<code>tomcat-mynet-2</code>则不行。<font color="red">这证明了我们的配置是正确的。原理：一个容器多个IP</font></p>
+</blockquote>
+<blockquote>
+<p>注意：另外不使用的网络也可以通过<code>docker network prune</code>来清除。它不像数据卷占用大量空间，也不用经常在意。</p>
+</blockquote>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">Xiangjie</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://awslzhang.top/2020/11/13/Docker%E7%BD%91%E7%BB%9C/">https://awslzhang.top/2020/11/13/Docker%E7%BD%91%E7%BB%9C/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://awslzhang.top" target="_blank">zxj</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Docker/">Docker</a></div><div class="post_share"><div class="social-share" data-image="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/下载.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2020/11/14/Compose/"><img class="prev-cover" src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/下载.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">Compose</div></div></a></div><div class="next-post pull-right"><a href="/2020/11/13/Docker%E6%95%B0%E6%8D%AE%E5%8D%B7/"><img class="next-cover" src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/下载.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Docker数据卷</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2020/11/13/Docker数据卷/" title="Docker数据卷"><img class="cover" src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/下载.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-11-13</div><div class="title">Docker数据卷</div></div></a></div><div><a href="/2020/03/17/FastDFS文件系统/" title="FastDFS文件系统"><img class="cover" src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-03-17</div><div class="title">FastDFS文件系统</div></div></a></div><div><a href="/2020/02/14/GitLab的搭建/" title="GitLab的搭建"><img class="cover" src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-02-14</div><div class="title">GitLab的搭建</div></div></a></div><div><a href="/2020/03/05/使用Gitlab持续集成/" title="使用Gitlab持续集成"><img class="cover" src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-03-05</div><div class="title">使用Gitlab持续集成</div></div></a></div><div><a href="/2020/11/07/构建镜像之Dockerfile/" title="构建镜像之Dockerfile"><img class="cover" src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/下载.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-11-07</div><div class="title">构建镜像之Dockerfile</div></div></a></div><div><a href="/2020/02/26/消息队列MQ/" title="消息队列MQ"><img class="cover" src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-02-26</div><div class="title">消息队列MQ</div></div></a></div></div></div></div><div class="aside_content" id="aside_content"><div class="card-widget card-info"><div class="card-content"><div class="card-info-avatar is-center"><img class="avatar-img" src="/null" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">Xiangjie</div><div class="author-info__description"></div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/XiangJie-Zhang" target="_blank" title="Github"><i class="fab fa-github"></i></a><a class="social-icon" href="mailto:qluzxj@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a></div></div></div><div class="card-widget card-announcement"><div class="card-content"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Docker%E7%BD%91%E7%BB%9C"><span class="toc-number">1.</span> <span class="toc-text">Docker网络</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%A4%96%E9%83%A8%E8%AE%BF%E9%97%AE%E5%AE%B9%E5%99%A8"><span class="toc-number">1.1.</span> <span class="toc-text">外部访问容器</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8C%87%E5%AE%9A%E6%98%A0%E5%B0%84%E5%88%86%E7%B1%BB"><span class="toc-number">1.1.1.</span> <span class="toc-text">指定映射分类</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%98%A0%E5%B0%84%E6%89%80%E6%9C%89%E6%8E%A5%E5%8F%A3%E5%9C%B0%E5%9D%80"><span class="toc-number">1.1.1.1.</span> <span class="toc-text">映射所有接口地址</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%98%A0%E5%B0%84%E5%88%B0%E6%8C%87%E5%AE%9A%E5%9C%B0%E5%9D%80%E7%9A%84%E6%8C%87%E5%AE%9A%E7%AB%AF%E5%8F%A3"><span class="toc-number">1.1.1.2.</span> <span class="toc-text">映射到指定地址的指定端口</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%98%A0%E5%B0%84%E5%88%B0%E6%8C%87%E5%AE%9A%E5%9C%B0%E5%9D%80%E7%9A%84%E4%BB%BB%E6%84%8F%E7%AB%AF%E5%8F%A3"><span class="toc-number">1.1.1.3.</span> <span class="toc-text">映射到指定地址的任意端口</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9F%A5%E7%9C%8B%E6%98%A0%E5%B0%84%E7%AB%AF%E5%8F%A3%E9%85%8D%E7%BD%AE"><span class="toc-number">1.1.2.</span> <span class="toc-text">查看映射端口配置</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%B9%E5%99%A8%E4%BA%92%E8%81%94"><span class="toc-number">1.2.</span> <span class="toc-text">容器互联</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%96%B0%E5%BB%BA%E7%BD%91%E7%BB%9C"><span class="toc-number">1.2.1.</span> <span class="toc-text">新建网络</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BF%9E%E6%8E%A5%E5%AE%B9%E5%99%A8"><span class="toc-number">1.2.2.</span> <span class="toc-text">连接容器</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Docker-Compose"><span class="toc-number">1.3.</span> <span class="toc-text">Docker Compose</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E9%AB%98%E7%BA%A7%E7%BD%91%E7%BB%9C%E9%85%8D%E7%BD%AE"><span class="toc-number">2.</span> <span class="toc-text">高级网络配置</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BF%AB%E9%80%9F%E9%85%8D%E7%BD%AE%E6%8C%87%E5%8D%97"><span class="toc-number">2.1.</span> <span class="toc-text">快速配置指南</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BE%8B%E5%AD%90"><span class="toc-number">2.2.</span> <span class="toc-text">例子</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%BD%91%E7%BB%9C%E6%89%93%E9%80%9A"><span class="toc-number">2.2.1.</span> <span class="toc-text">网络打通</span></a></li></ol></li></ol></li></ol></div></div></div><div class="card-widget card-recent-post"><div class="card-content"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink的时间语义和watermark"/></a><div class="content"><a class="title" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark">Flink的时间语义和watermark</a><time datetime="2020-12-23T10:59:07.000Z" title="发表于 2020-12-23 18:59:07">2020-12-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/Flink-API/" title="Flink Api学习"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Api学习"/></a><div class="content"><a class="title" href="/2020/12/17/Flink-API/" title="Flink Api学习">Flink Api学习</a><time datetime="2020-12-17T12:36:28.000Z" title="发表于 2020-12-17 20:36:28">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/ready/" title="ready!"><img src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="ready!"/></a><div class="content"><a class="title" href="/2020/12/17/ready/" title="ready!">ready!</a><time datetime="2020-12-16T16:02:06.000Z" title="发表于 2020-12-17 00:02:06">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink学习笔记"/></a><div class="content"><a class="title" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记">Flink学习笔记</a><time datetime="2020-12-16T12:29:56.000Z" title="发表于 2020-12-16 20:29:56">2020-12-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目"><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/下载.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="k8s集群监控、高可用以及部署自建Java项目"/></a><div class="content"><a class="title" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目">k8s集群监控、高可用以及部署自建Java项目</a><time datetime="2020-12-06T01:26:41.000Z" title="发表于 2020-12-06 09:26:41">2020-12-06</time></div></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By Xiangjie</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><canvas class="fireworks" mobile="false"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script></div></body></html>

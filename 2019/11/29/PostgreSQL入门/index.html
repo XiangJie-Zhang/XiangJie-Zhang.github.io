@@ -1,0 +1,455 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PostgreSQL入门 | zxj</title><meta name="keywords" content="PostgreSQL"><meta name="author" content="Xiangjie"><meta name="copyright" content="Xiangjie"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="安装根据自身的需要下载和安装PostgreSQL。下载链接 这里我安装的是Windows PostgreSQL 12.0 Installation; 正常情况下，安装完成后，PostgreSQL服务器会自动在本机的5432端口开启。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PostgreSQL入门">
+<meta property="og:url" content="https://awslzhang.top/2019/11/29/PostgreSQL%E5%85%A5%E9%97%A8/index.html">
+<meta property="og:site_name" content="zxj">
+<meta property="og:description" content="安装根据自身的需要下载和安装PostgreSQL。下载链接 这里我安装的是Windows PostgreSQL 12.0 Installation; 正常情况下，安装完成后，PostgreSQL服务器会自动在本机的5432端口开启。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg">
+<meta property="article:published_time" content="2019-11-29T01:01:34.000Z">
+<meta property="article:modified_time" content="2021-01-01T05:49:59.970Z">
+<meta property="article:author" content="Xiangjie">
+<meta property="article:tag" content="PostgreSQL">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://awslzhang.top/2019/11/29/PostgreSQL%E5%85%A5%E9%97%A8/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: Xiangjie","link":"链接: ","source":"来源: zxj","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: {"chs_to_cht":"你已切换为繁体","cht_to_chs":"你已切换为简体","day_to_night":"你已切换为深色模式","night_to_day":"你已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#121212","position":"bottom-left"},
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: true,
+  isToc: true,
+  postUpdate: '2021-01-01 13:49:59'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.0.2"><link rel="alternate" href="/atom.xml" title="zxj" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">zxj</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">PostgreSQL入门</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2019-11-29T01:01:34.000Z" title="发表于 2019-11-29 09:01:34">2019-11-29</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-01-01T05:49:59.970Z" title="更新于 2021-01-01 13:49:59">2021-01-01</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/">数据库</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">3.6k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>12分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h1><p>根据自身的需要下载和安装PostgreSQL。<a target="_blank" rel="noopener" href="https://www.postgresql.org/download/">下载链接</a></p>
+<p>这里我安装的是Windows PostgreSQL 12.0 Installation;</p>
+<p>正常情况下，安装完成后，PostgreSQL服务器会自动在本机的5432端口开启。</p>
+<a id="more"></a>
+
+<h1 id="数据库操作"><a href="#数据库操作" class="headerlink" title="数据库操作"></a>数据库操作</h1><h2 id="连接数据库"><a href="#连接数据库" class="headerlink" title="连接数据库"></a>连接数据库</h2><p>如果想对数据库进行操作我们需要先连接到数据库，下面介绍几种常用的连接数据库的方法。</p>
+<h3 id="psql-控制台"><a href="#psql-控制台" class="headerlink" title="psql 控制台"></a><strong>psql 控制台</strong></h3><p> 初次安装后，默认生成一个名为postgres的数据库和一个名为postgres的数据库用户。 </p>
+<blockquote>
+<p>首先，打开psql命令行，根据提示输入<code>Server</code>、<code>Database</code>、<code>Port</code>、<code>Username</code>、<code>口令</code>来完成登陆。</p>
+<p>如果出现以下任一内容，证明已经登陆成功。两者的区别在于<code>#</code>和<code>&gt;</code>，<code>#</code> 提示符意味着你是数据库超级用户 。作为超级用户意味着你不受访问控制的限制 。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">postgres=<span class="comment">#</span></span><br><span class="line"><span class="comment">-- 或者</span></span><br><span class="line">anyuser=&gt;</span><br></pre></td></tr></table></figure>
+</blockquote>
+<h3 id="pgAdmin服务"><a href="#pgAdmin服务" class="headerlink" title="pgAdmin服务"></a>pgAdmin服务</h3><p> pgAdmin是PostgreSQL（世界上最先进的开源数据库）中最受欢迎和功能最丰富的开源管理和开发平台。 </p>
+<blockquote>
+<p>我们需要手动开启pgadmin服务，这里以windows系统为例，找到我们PostgreSQL的安装路径。默认安装位置为<code>C:\Program Files\PostgreSQL\12</code>。</p>
+<p>然后根据你的安装路径来打开<code>/pgAdmin 4/bin/pgAdmin4.exe</code>。</p>
+<p>此时pgAdmin会以网页的形式打开，如果没有打开可以手动访问<code>http://127.0.0.1:63891/browser/ </code></p>
+</blockquote>
+<h2 id="新增数据库"><a href="#新增数据库" class="headerlink" title="新增数据库"></a>新增数据库</h2><p>创建数据库既可以通过psql来创建，也可以通过bash中使用特定命令来创建。</p>
+<h3 id="psql方式"><a href="#psql方式" class="headerlink" title="psql方式"></a>psql方式</h3><blockquote>
+<p>首先，使用上述的psql连接数据库成功后，直接执行命令：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">create</span> <span class="keyword">database</span> mydb;</span><br></pre></td></tr></table></figure>
+
+<p>然后，执行<code>\l</code>命令查询所有数据库，确认是否创建成功:</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">\l</span><br></pre></td></tr></table></figure>
+</blockquote>
+<h3 id="bash方式"><a href="#bash方式" class="headerlink" title="bash方式"></a>bash方式</h3><blockquote>
+<p>首先 <code>win + r</code> 输入<code>cmd</code>打开命令行</p>
+<p>然后，输入<code>createdb -U postgres mydb</code>，-U后面要制定使用的用户</p>
+<p>如果此时出现了<code>&#39;createdb&#39; 不是内部或外部命令，也不是可运行的程序或批处理文件。</code>不要担心，把postgreSQL安装目录下的bin文件加入环境变量即可。</p>
+</blockquote>
+<hr>
+<h2 id="删除数据库"><a href="#删除数据库" class="headerlink" title="删除数据库"></a>删除数据库</h2><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- psql</span></span><br><span class="line"><span class="keyword">drop</span> <span class="keyword">database</span> mydb;</span><br><span class="line"><span class="comment">-- 在bash中(注意有无分号)</span></span><br><span class="line">dropdb -U postgres mydb</span><br></pre></td></tr></table></figure>
+
+<h1 id="psql常用命令"><a href="#psql常用命令" class="headerlink" title="psql常用命令"></a>psql常用命令</h1><table>
+<thead>
+<tr>
+<th>命令</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>\password</td>
+<td>设置密码</td>
+</tr>
+<tr>
+<td>\h</td>
+<td>查看SQL命令解释</td>
+</tr>
+<tr>
+<td>?</td>
+<td>查看psql命令列表</td>
+</tr>
+<tr>
+<td>\l</td>
+<td>列出所有数据库</td>
+</tr>
+<tr>
+<td>\c [database_name]</td>
+<td>连接其他数据库</td>
+</tr>
+<tr>
+<td>\d</td>
+<td>列出当前数据库的表</td>
+</tr>
+<tr>
+<td>\d [table_name]</td>
+<td>列出某个表的数据结构</td>
+</tr>
+<tr>
+<td>\du</td>
+<td>列出所有用户</td>
+</tr>
+<tr>
+<td>\e</td>
+<td>打开文本编辑器</td>
+</tr>
+<tr>
+<td>\q</td>
+<td>离开</td>
+</tr>
+<tr>
+<td>\conninfo</td>
+<td>列出当前数据库和连接信息</td>
+</tr>
+</tbody></table>
+<h1 id="数据类型"><a href="#数据类型" class="headerlink" title="数据类型"></a>数据类型</h1><p>这里只列举了一些数据类型。</p>
+<h2 id="数字类型"><a href="#数字类型" class="headerlink" title="数字类型"></a>数字类型</h2><p>数字类型由2、4或8字节的整数以及4或8字节的浮点数和可选精度小数组成。</p>
+<table>
+<thead>
+<tr>
+<th>名字</th>
+<th>存储尺寸</th>
+<th>描述</th>
+<th>范围</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>smallint</code></td>
+<td>2字节</td>
+<td>小范围整数</td>
+<td>-32768 to +32767</td>
+</tr>
+<tr>
+<td><code>integer</code></td>
+<td>4字节</td>
+<td>整数的典型选择</td>
+<td>-2147483648 to +2147483647</td>
+</tr>
+<tr>
+<td><code>bigint</code></td>
+<td>8字节</td>
+<td>大范围整数</td>
+<td>-9223372036854775808 to +9223372036854775807</td>
+</tr>
+<tr>
+<td><code>decimal</code></td>
+<td>可变</td>
+<td>用户指定精度，精确</td>
+<td>最高小数点前131072位，以及小数点后16383位</td>
+</tr>
+<tr>
+<td><code>numeric</code></td>
+<td>可变</td>
+<td>用户指定精度，精确</td>
+<td>最高小数点前131072位，以及小数点后16383位</td>
+</tr>
+<tr>
+<td><code>real</code></td>
+<td>4字节</td>
+<td>可变精度，不精确</td>
+<td>6位十进制精度</td>
+</tr>
+<tr>
+<td><code>double precision</code></td>
+<td>8字节</td>
+<td>可变精度，不精确</td>
+<td>15位十进制精度</td>
+</tr>
+<tr>
+<td><code>smallserial</code></td>
+<td>2字节</td>
+<td>自动增加的小整数</td>
+<td>1到32767</td>
+</tr>
+<tr>
+<td><code>serial</code></td>
+<td>4字节</td>
+<td>自动增加的整数</td>
+<td>1到2147483647</td>
+</tr>
+<tr>
+<td><code>bigserial</code></td>
+<td>8字节</td>
+<td>自动增长的大整数</td>
+<td>1到9223372036854775807</td>
+</tr>
+</tbody></table>
+<h3 id="整数类型"><a href="#整数类型" class="headerlink" title="整数类型"></a>整数类型</h3><p>类型<code>smallint</code>、<code>integer</code>和<code>bigint</code>存储各种范围的全部是数字的数，也就是没有小数部分的数字。试图存储超出范围以外的值将导致一个错误。</p>
+<p>常用的类型是<code>integer</code>，因为它提供了在范围、存储空间和性能之间的最佳平衡。一般只有在磁盘空间紧张的时候才使用 <code>smallint</code>类型。而只有在<code>integer</code>的范围不够的时候才使用<code>bigint</code>。</p>
+<p>SQL只声明了整数类型<code>integer</code>（或<code>int</code>）、<code>smallint</code>和<code>bigint</code>。类型<code>int2</code>、<code>int4</code>和<code>int8</code>都是扩展，也在许多其它SQL数据库系统中使用。</p>
+<h3 id="任意精度数字"><a href="#任意精度数字" class="headerlink" title="任意精度数字"></a>任意精度数字</h3><p>类型<code>numeric</code>可以存储非常多位的数字。我们<font color='red'>特别建议将它用于货币金额和其它要求计算准确的数量。</font></p>
+<p><code>numeric</code>值的计算在可能的情况下会得到准确的结果，例如加法、减法、乘法。</p>
+<p>不过，<code>numeric</code>类型上的算术运算比整数类型浮点数类型要<font color='red'>慢很多</font>。</p>
+<p><code>numeric</code>类型具有<em>precision</em>（精度）和 <em>scale</em>（刻度）两个概念：</p>
+<ol>
+<li>一个<code>numeric</code>的<em>precision</em>（精度）是整个数中有效位的总数  ，也就是小数点两边的位数。 </li>
+<li><code>numeric</code>的<em>scale</em>（刻度）是小数部分的数字位数，也就是小数点右边的部分。 </li>
+</ol>
+<p>例如：数字 23.5141 的精度为6而刻度为4。可以认为整数的刻度为零。</p>
+<p><code>numeric</code>列的最大精度和最大比例都是可以配置的。要声明一个类型为<code>numeric</code>的列，你可以用下面的语法：</p>
+<p><font color='red'>精度必须为正数，比例可以为零或者正数。 </font> </p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">NUMERIC(precision, scale)</span><br><span class="line">NUMERIC(precision) / NUMERIC</span><br></pre></td></tr></table></figure>
+
+<p><font color='red'> 创建一个列时不使用精度或比例，则该列可以存储任何精度和比例的数字值，并且值的范围最多可以到实现精度的上限。  </font></p>
+<blockquote>
+<p><strong><em>注意</em></strong></p>
+<p>如果一个要存储的值的比例比列声明的比例高，那么系统将尝试圆整（四舍五入）该值到指定的分数位数。</p>
+<p> 然后，如果小数点左边的位数超过了声明的精度减去声明的比例，那么抛出一个错误。</p>
+<p>除了普通的数字值之外，<code>numeric</code>类型允许特殊值<code>NaN</code>， 表示“不是一个数字”。</p>
+<p>任何在 <code>NaN</code>上面的操作都生成另外一个<code>NaN</code>。 </p>
+<p>如果在 SQL 命令里把这些值当作一个常量写，你必须在其周围放上单引号，例如<code>UPDATE table SET x = &#39;NaN&#39;</code>。</p>
+<p>在输入时，字串<code>NaN</code>被识别为大小写无关。  </p>
+</blockquote>
+<hr>
+<h2 id="序数类型"><a href="#序数类型" class="headerlink" title="序数类型"></a>序数类型</h2><p>序数类型是PostgreSQL特有的创建一个自增列的方法。</p>
+<p><code>smallserial</code>、<code>serial</code>和<code>bigserial</code>类型不是真正的类型，它们只是为了创建唯一标识符列而存在的方便符号（类似其它一些数据库中支持的<code>AUTO_INCREMENT</code>属性）。 </p>
+<p>创建一个叙述类型：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tablename (</span><br><span class="line"> colname <span class="built_in">SERIAL</span></span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<p>他等价于：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">SEQUENCE</span> tablename_colname_seq;</span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> tablename (</span><br><span class="line"> colname <span class="built_in">integer</span> <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="keyword">nextval</span>(<span class="string">&#x27;tablename_colname_seq&#x27;</span>)</span><br><span class="line">);</span><br><span class="line"><span class="keyword">ALTER</span> <span class="keyword">SEQUENCE</span> tablename_colname_seq OWNED <span class="keyword">BY</span> tablename.colname;</span><br></pre></td></tr></table></figure>
+
+<p>因此，我们就创建了一个整数列并且把它的缺省值安排为从一个序列发生器取值。</p>
+<p>应用了一个<code>NOT NULL</code>约束以确保空值不会被插入。最后，该序列被标记为“属于”该列，这样当列或表被删除时该序列也会被删除。 </p>
+<p>当我们使用<code>\t tablename</code>查看表结构中的序数类型时，结果如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">  栏位   |  类型   | 校对规则 |  可空的  |                    预设</span><br><span class="line">---------+---------+----------+----------+--------------------------------------------</span><br><span class="line"> colname | integer |          | not null | nextval(&#39;tablename_colname_seq&#39;::regclass)</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="字符串类型"><a href="#字符串类型" class="headerlink" title="字符串类型"></a>字符串类型</h2><table>
+<thead>
+<tr>
+<th>名字</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>character varying(n), varchar(n)</td>
+<td>有限制的变长</td>
+</tr>
+<tr>
+<td>character(n), char(n)</td>
+<td>定长，空格填充</td>
+</tr>
+<tr>
+<td>text</td>
+<td>无限变长</td>
+</tr>
+</tbody></table>
+<p>SQL定义了两种基本的字符类型： character varying(n), varchar(n)和character(n), char(n)。</p>
+<p>其中*<code>n</code><em>是一个正整数。两种类型都可以存储最多</em><code>n</code>*个字符长的串。试图存储更长的串到这些类型的列里会产生一个错误， 除非超出长度的字符都是空白，这种情况下该串将被截断为最大长度（这个看上去有点怪异的例外是SQL标准要求的）。</p>
+<p><font color='red'> 如果要存储的串比声明的长度短，类型为<code>character</code>的值将会用空白填满；而类型为<code>character varying</code>的值将只是存储短些的串。</font></p>
+<p>另外，PostgreSQL提供<code>text</code>类型，它可以存储任何长度的串。尽管类型<code>text</code>不是SQL标准，但是许多其它 SQL 数据库系统也有它。</p>
+<p>该如何选择这三种类型？</p>
+<p>这三种类型之间没有性能差别，只不过是在使用填充空白的类型的时候需要更多存储尺寸，以及在存储到一个有长度约束的列时需要少量额外CPU周期来检查长度。虽然在某些其它的数据库系统里，<code>character(n)</code>有一定的性能优势，但在PostgreSQL里没有。事实上，<code>character(n)</code>通常是这三种类型之中最慢的一个，<font color='red'>因为它需要额外的存储开销。</font>在大多数情况下，应该使用<code>text</code>或者<code>character varying</code>。 </p>
+<hr>
+<h1 id="SQL语言"><a href="#SQL语言" class="headerlink" title="SQL语言"></a>SQL语言</h1><h2 id="创建表"><a href="#创建表" class="headerlink" title="创建表"></a>创建表</h2><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> weather (</span><br><span class="line"> city            <span class="built_in">varchar</span>(<span class="number">80</span>),</span><br><span class="line"> temp_lo         <span class="built_in">int</span>,           <span class="comment">-- 最低温度</span></span><br><span class="line"> temp_hi         <span class="built_in">int</span>,           <span class="comment">-- 最高温度</span></span><br><span class="line"> prcp            <span class="built_in">real</span>,          <span class="comment">-- 湿度</span></span><br><span class="line"> <span class="built_in">date</span>            <span class="built_in">date</span></span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> cities (</span><br><span class="line"> <span class="keyword">name</span>            <span class="built_in">varchar</span>(<span class="number">80</span>),</span><br><span class="line"> location        point</span><br><span class="line">);</span><br><span class="line"><span class="comment">-- varchar(80)指定了一个可以存储最长 80 个字符的任意字符串的数据类型。int是普通的整数类型。real是一种用于存储单精度浮点数的类型。</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="copy命令"><a href="#copy命令" class="headerlink" title="copy命令"></a>copy命令</h2><p>copy命令可以将文件数据输入到表，也可以将表的数据输出到文件。</p>
+<p>这里只介绍了将文件的数据导入表。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">COPY table_name [ ( column_name [, ...] ) ]</span><br><span class="line"> FROM &#123; &#x27;filename&#x27; | PROGRAM &#x27;command&#x27; | STDIN &#125;</span><br><span class="line"> [ [ <span class="keyword">WITH</span> ] ( <span class="keyword">option</span> [, ...] ) ]</span><br><span class="line"><span class="comment">-- 其中 option 可以是下列之一：</span></span><br><span class="line"></span><br><span class="line"> <span class="keyword">FORMAT</span> format_name</span><br><span class="line"> OIDS [ <span class="built_in">boolean</span> ]</span><br><span class="line"> FREEZE [ <span class="built_in">boolean</span> ]</span><br><span class="line"> DELIMITER <span class="string">&#x27;delimiter_character&#x27;</span></span><br><span class="line"> <span class="literal">NULL</span> <span class="string">&#x27;null_string&#x27;</span></span><br><span class="line"> HEADER [ <span class="built_in">boolean</span> ]</span><br><span class="line"> QUOTE <span class="string">&#x27;quote_character&#x27;</span></span><br><span class="line"> ESCAPE <span class="string">&#x27;escape_character&#x27;</span></span><br><span class="line"> FORCE_QUOTE &#123; ( column_name [, ...] ) | * &#125;</span><br><span class="line"> FORCE_NOT_NULL ( column_name [, ...] )</span><br><span class="line"> FORCE_NULL ( column_name [, ...] )</span><br><span class="line"> <span class="keyword">ENCODING</span> <span class="string">&#x27;encoding_name&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>常用参数解释：</p>
+<p><em><code>filename</code></em></p>
+<p>输入或者输出文件的路径名。一个输入文件的名称可以是一个绝对或相对路径， 但一个输出文件的名称必须是绝对路径。Windows 用户可能需要使用一个 <code>E&#39;&#39;</code>字符串并且双写路径名称中使用的任何反斜线。</p>
+<p><em><code>FORMAT</code></em><br>选择要读取或者写入的数据格式： text、 csv（逗号分隔值）或者binary。 默认是text。</p>
+<p><em><code>OIDS</code></em></p>
+<p>指定为每一行复制 OID（如果为一个没有 OID 的表指定了 <code>OIDS</code>或者正在复制的是一个*<code>查询</code>*，则会出现错误）</p>
+<p><em><code>DELIMITER</code></em></p>
+<p>指定分隔文件每行中各列的字符。文本格式中默认是一个制表符， 而CSV格式中默认是一个逗号。这必须是一个单一 的单字节字符。使用binary格式时不允许这个选项</p>
+<p><em><code>NULL</code></em></p>
+<p>指定表示一个空值的字符串。文本格式中默认是 <code>\N</code>（反斜线-N），<code>CSV</code>格式中默认 是一个未加引用的空串。在你不想区分空值和空串的情况下，即使在文本 格式中你也可能更喜欢空串。使用<code>binary</code>格式时不允许这 个选项。 </p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 简单例子</span></span><br><span class="line">copy cities from &#x27;D:/ttx.txt&#x27;</span><br><span class="line">DELIMITER &#x27;@&#x27;;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="高级特性"><a href="#高级特性" class="headerlink" title="高级特性"></a>高级特性</h2><h3 id="视图"><a href="#视图" class="headerlink" title="视图"></a>视图</h3><p>假设天气记录和城市为止的组合列表对我们的应用有用，但我们又不想每次需要使用它时都敲入整个查询。</p>
+<p>我们可以在该查询上创建一个<em>视图</em>，这会给该查询一个名字，我们可以像使用一个普通表一样来使用它： </p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">VIEW</span> myview <span class="keyword">AS</span></span><br><span class="line"> <span class="keyword">SELECT</span> city, temp_lo, temp_hi, prcp, <span class="built_in">date</span>, location</span><br><span class="line">     <span class="keyword">FROM</span> weather, cities</span><br><span class="line">     <span class="keyword">WHERE</span> city = <span class="keyword">name</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> myview;</span><br></pre></td></tr></table></figure>
+
+<h3 id="外键"><a href="#外键" class="headerlink" title="外键"></a>外键</h3><p>我们希望确保在<code>cities</code>表中有相应项之前任何人都不能在<code>weather</code>表中插入行。这叫做维持数据的<em>引用完整性</em>。 </p>
+<p>这时使用外键：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> cities (</span><br><span class="line">     city     <span class="built_in">varchar</span>(<span class="number">80</span>) primary <span class="keyword">key</span>,</span><br><span class="line">     location point</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> weather (</span><br><span class="line">     city      <span class="built_in">varchar</span>(<span class="number">80</span>) <span class="keyword">references</span> cities(city),</span><br><span class="line">     temp_lo   <span class="built_in">int</span>,</span><br><span class="line">     temp_hi   <span class="built_in">int</span>,</span><br><span class="line">     prcp      <span class="built_in">real</span>,</span><br><span class="line">     <span class="built_in">date</span>      <span class="built_in">date</span></span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<p>这时如果直接插入weather表数据，则：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> weather <span class="keyword">VALUES</span> (<span class="string">&#x27;Berkeley&#x27;</span>, <span class="number">45</span>, <span class="number">53</span>, <span class="number">0.0</span>, <span class="string">&#x27;1994-11-28&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>error：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ERROR:  <span class="keyword">insert</span> <span class="keyword">or</span> <span class="keyword">update</span> <span class="keyword">on</span> <span class="keyword">table</span> <span class="string">&quot;weather&quot;</span> violates <span class="keyword">foreign</span> <span class="keyword">key</span> <span class="keyword">constraint</span> <span class="string">&quot;weather_city_fkey&quot;</span></span><br><span class="line">DETAIL:  <span class="keyword">Key</span> (city)=(Berkeley) <span class="keyword">is</span> <span class="keyword">not</span> <span class="keyword">present</span> <span class="keyword">in</span> <span class="keyword">table</span> <span class="string">&quot;cities&quot;</span>.</span><br></pre></td></tr></table></figure>
+
+<h3 id="窗口函数"><a href="#窗口函数" class="headerlink" title="窗口函数"></a>窗口函数</h3><p><a target="_blank" rel="noopener" href="https://www.postgresql.org/download/"></a></p>
+<hr>
+<h1 id="数据库角色"><a href="#数据库角色" class="headerlink" title="数据库角色"></a>数据库角色</h1><p>PostgreSQL使用<em>角色</em>的概念管理数据库访问权限。</p>
+<p>一个角色可以被看成是一个数据库用户或者是一个数据库用户组，这取决于角色被怎样设置。角色可以拥有数据库对象（例如，表和函数）并且能够把那些对象上的权限赋予给其他角色来控制谁能访问哪些对象。</p>
+<p>此外，还可以把一个角色中的<em>成员资格</em>授予给另一个角色，这样允许成员角色使用被赋予给另一个角色的权限。 </p>
+<h2 id="创建角色"><a href="#创建角色" class="headerlink" title="创建角色"></a>创建角色</h2><p>要创建一个角色，可使用CREATE ROLE SQL 命令： </p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">ROLE</span> zxj;</span><br><span class="line"><span class="keyword">DROP</span> <span class="keyword">ROLE</span> zxj;</span><br></pre></td></tr></table></figure>
+
+<p>查看已存在的角色：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">\du</span><br></pre></td></tr></table></figure>
+
+<p>结果：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">角色名称 |                    属性                    | 成员属于</span><br><span class="line"><span class="comment">----------+--------------------------------------------+----------</span></span><br><span class="line">name     | 无法登录                                   | &#123;&#125;</span><br><span class="line">postgres | 超级用户, 建立角色, 建立 DB, 复制, 绕过RLS | &#123;&#125;</span><br><span class="line">zxj      | 无法登录                                   | &#123;&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="角色属性"><a href="#角色属性" class="headerlink" title="角色属性"></a>角色属性</h2><p>一个数据库角色可以有一些属性，它们定义角色的权限并且与客户端认证系统交互。 </p>
+<p>常见的数据库角色属性有：</p>
+<ol>
+<li>*<code>login privilege</code>*：只有具有<code>LOGIN</code>属性的角色才能被用于一个数据库连接的初始角色名称。<font color='red'>想要登录还必须设置password</font></li>
+<li>*<code>superuser status</code>*：数据库超级用户，它会绕开所有权限检查，除了登入的权利。只有超级用户posgres才有权力创建此属性的用户</li>
+<li>*<code>database creation</code>*：创建数据库，一个角色必须被显式给予权限才能创建数据库（除了超级用户，因为它们会绕开所有权限检查）。</li>
+<li>*<code>role creation</code>*：创建角色，一个角色必须被显式给予权限才能创建更多角色（除了超级用户，因为它们会绕开所有权限检查）。一个带有CREATEROLE权限的角色也可以修改和删除其他角色，还可以授予或回收角色中的成员关系。</li>
+<li>*<code>initiating replication</code>*：一个角色必须被显式给予权限才能发起流复制（除了超级用户，因为它们会绕开所有权限检查）。一个被用于流复制的角色必须也具有<code>LOGIN</code>权限。</li>
+<li>*<code>password</code>*：给用户设置密码，只有当客户端认证方法要求用户在连接数据库时提供一个口令时，一个口令才有意义。<code>password</code>和<code>md5</code>认证方法使用口令。</li>
+</ol>
+<p>如何创建上述角色：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- LOGIN</span></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">ROLE</span> <span class="keyword">name</span> LOGIN;</span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">USER</span> <span class="keyword">name</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- superuser status</span></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">ROLE</span> <span class="keyword">name</span> SUPERUSER;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- database creation</span></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">ROLE</span> <span class="keyword">name</span> CREATEDB;</span><br><span class="line"></span><br><span class="line"><span class="comment">--  role creation</span></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">ROLE</span> <span class="keyword">name</span> CREATEROL;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- initiating replication</span></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">ROLE</span> <span class="keyword">name</span> <span class="keyword">REPLICATION</span> LOGIN;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- password</span></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">ROLE</span> <span class="keyword">name</span> <span class="keyword">PASSWORD</span> <span class="string">&#x27;string&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 一般创建用户</span></span><br><span class="line"><span class="keyword">CREATE</span> <span class="keyword">ROLE</span> <span class="keyword">name</span> LOGIN CREATEDB <span class="keyword">PASSWORD</span> <span class="string">&#x27;string&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">Xiangjie</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://awslzhang.top/2019/11/29/PostgreSQL%E5%85%A5%E9%97%A8/">https://awslzhang.top/2019/11/29/PostgreSQL%E5%85%A5%E9%97%A8/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://awslzhang.top" target="_blank">zxj</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/PostgreSQL/">PostgreSQL</a></div><div class="post_share"><div class="social-share" data-image="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-full"><a href="/2019/11/29/%E5%BC%80%E7%AA%97%E5%87%BD%E6%95%B0/"><img class="prev-cover" src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">开窗函数</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2019/12/02/分组函数/" title="分组函数"><img class="cover" src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2019-12-02</div><div class="title">分组函数</div></div></a></div><div><a href="/2019/12/10/记一次postgres数据库like优化/" title="记一次postgres数据库like优化"><img class="cover" src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2019-12-10</div><div class="title">记一次postgres数据库like优化</div></div></a></div></div></div></div><div class="aside_content" id="aside_content"><div class="card-widget card-info"><div class="card-content"><div class="card-info-avatar is-center"><img class="avatar-img" src="/null" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">Xiangjie</div><div class="author-info__description"></div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/XiangJie-Zhang" target="_blank" title="Github"><i class="fab fa-github"></i></a><a class="social-icon" href="mailto:qluzxj@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a></div></div></div><div class="card-widget card-announcement"><div class="card-content"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%AE%89%E8%A3%85"><span class="toc-number">1.</span> <span class="toc-text">安装</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E5%BA%93%E6%93%8D%E4%BD%9C"><span class="toc-number">2.</span> <span class="toc-text">数据库操作</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%BF%9E%E6%8E%A5%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="toc-number">2.1.</span> <span class="toc-text">连接数据库</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#psql-%E6%8E%A7%E5%88%B6%E5%8F%B0"><span class="toc-number">2.1.1.</span> <span class="toc-text">psql 控制台</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#pgAdmin%E6%9C%8D%E5%8A%A1"><span class="toc-number">2.1.2.</span> <span class="toc-text">pgAdmin服务</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%96%B0%E5%A2%9E%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="toc-number">2.2.</span> <span class="toc-text">新增数据库</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#psql%E6%96%B9%E5%BC%8F"><span class="toc-number">2.2.1.</span> <span class="toc-text">psql方式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#bash%E6%96%B9%E5%BC%8F"><span class="toc-number">2.2.2.</span> <span class="toc-text">bash方式</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%A0%E9%99%A4%E6%95%B0%E6%8D%AE%E5%BA%93"><span class="toc-number">2.3.</span> <span class="toc-text">删除数据库</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#psql%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4"><span class="toc-number">3.</span> <span class="toc-text">psql常用命令</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B"><span class="toc-number">4.</span> <span class="toc-text">数据类型</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%95%B0%E5%AD%97%E7%B1%BB%E5%9E%8B"><span class="toc-number">4.1.</span> <span class="toc-text">数字类型</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%95%B4%E6%95%B0%E7%B1%BB%E5%9E%8B"><span class="toc-number">4.1.1.</span> <span class="toc-text">整数类型</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BB%BB%E6%84%8F%E7%B2%BE%E5%BA%A6%E6%95%B0%E5%AD%97"><span class="toc-number">4.1.2.</span> <span class="toc-text">任意精度数字</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BA%8F%E6%95%B0%E7%B1%BB%E5%9E%8B"><span class="toc-number">4.2.</span> <span class="toc-text">序数类型</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%B1%BB%E5%9E%8B"><span class="toc-number">4.3.</span> <span class="toc-text">字符串类型</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#SQL%E8%AF%AD%E8%A8%80"><span class="toc-number">5.</span> <span class="toc-text">SQL语言</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%9B%E5%BB%BA%E8%A1%A8"><span class="toc-number">5.1.</span> <span class="toc-text">创建表</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#copy%E5%91%BD%E4%BB%A4"><span class="toc-number">5.2.</span> <span class="toc-text">copy命令</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%AB%98%E7%BA%A7%E7%89%B9%E6%80%A7"><span class="toc-number">5.3.</span> <span class="toc-text">高级特性</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%A7%86%E5%9B%BE"><span class="toc-number">5.3.1.</span> <span class="toc-text">视图</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%A4%96%E9%94%AE"><span class="toc-number">5.3.2.</span> <span class="toc-text">外键</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AA%97%E5%8F%A3%E5%87%BD%E6%95%B0"><span class="toc-number">5.3.3.</span> <span class="toc-text">窗口函数</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E5%BA%93%E8%A7%92%E8%89%B2"><span class="toc-number">6.</span> <span class="toc-text">数据库角色</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%88%9B%E5%BB%BA%E8%A7%92%E8%89%B2"><span class="toc-number">6.1.</span> <span class="toc-text">创建角色</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%A7%92%E8%89%B2%E5%B1%9E%E6%80%A7"><span class="toc-number">6.2.</span> <span class="toc-text">角色属性</span></a></li></ol></li></ol></div></div></div><div class="card-widget card-recent-post"><div class="card-content"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink的时间语义和watermark"/></a><div class="content"><a class="title" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark">Flink的时间语义和watermark</a><time datetime="2020-12-23T10:59:07.000Z" title="发表于 2020-12-23 18:59:07">2020-12-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/Flink-API/" title="Flink Api学习"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Api学习"/></a><div class="content"><a class="title" href="/2020/12/17/Flink-API/" title="Flink Api学习">Flink Api学习</a><time datetime="2020-12-17T12:36:28.000Z" title="发表于 2020-12-17 20:36:28">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/ready/" title="ready!"><img src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="ready!"/></a><div class="content"><a class="title" href="/2020/12/17/ready/" title="ready!">ready!</a><time datetime="2020-12-16T16:02:06.000Z" title="发表于 2020-12-17 00:02:06">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink学习笔记"/></a><div class="content"><a class="title" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记">Flink学习笔记</a><time datetime="2020-12-16T12:29:56.000Z" title="发表于 2020-12-16 20:29:56">2020-12-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目"><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/下载.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="k8s集群监控、高可用以及部署自建Java项目"/></a><div class="content"><a class="title" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目">k8s集群监控、高可用以及部署自建Java项目</a><time datetime="2020-12-06T01:26:41.000Z" title="发表于 2020-12-06 09:26:41">2020-12-06</time></div></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By Xiangjie</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><canvas class="fireworks" mobile="false"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script></div></body></html>

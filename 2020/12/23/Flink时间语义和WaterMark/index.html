@@ -1,0 +1,387 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Flink的时间语义和watermark | zxj</title><meta name="keywords" content="Flink"><meta name="author" content="Xiangjie"><meta name="copyright" content="Xiangjie"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="前言我们将介绍时间语义，并描述流中不同的时间概念。我们将讨论流处理器在乱序事件流的情况下如何提供准确的计算结果，以及我们如何处理历史事件流，如何在流中进行时间旅行。  时间旅行。乱序事件流，更有古老数据的事件。  不同的时间语义  Event Time：事件的创建事件。（除了未开源的Google DataFlow外，Flink是唯一支持事件时间的） Ingestion Time：数据进入Flink">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink的时间语义和watermark">
+<meta property="og:url" content="https://awslzhang.top/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/index.html">
+<meta property="og:site_name" content="zxj">
+<meta property="og:description" content="前言我们将介绍时间语义，并描述流中不同的时间概念。我们将讨论流处理器在乱序事件流的情况下如何提供准确的计算结果，以及我们如何处理历史事件流，如何在流中进行时间旅行。  时间旅行。乱序事件流，更有古老数据的事件。  不同的时间语义  Event Time：事件的创建事件。（除了未开源的Google DataFlow外，Flink是唯一支持事件时间的） Ingestion Time：数据进入Flink">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://flink.apache.org/img/flink-header-logo.svg">
+<meta property="article:published_time" content="2020-12-23T10:59:07.000Z">
+<meta property="article:modified_time" content="2021-01-01T12:10:50.367Z">
+<meta property="article:author" content="Xiangjie">
+<meta property="article:tag" content="Flink">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://flink.apache.org/img/flink-header-logo.svg"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://awslzhang.top/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: Xiangjie","link":"链接: ","source":"来源: zxj","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: {"chs_to_cht":"你已切换为繁体","cht_to_chs":"你已切换为简体","day_to_night":"你已切换为深色模式","night_to_day":"你已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#121212","position":"bottom-left"},
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: true,
+  isToc: true,
+  postUpdate: '2021-01-01 20:10:50'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.0.2"><link rel="alternate" href="/atom.xml" title="zxj" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://flink.apache.org/img/flink-header-logo.svg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">zxj</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Flink的时间语义和watermark</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-12-23T10:59:07.000Z" title="发表于 2020-12-23 18:59:07">2020-12-23</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-01-01T12:10:50.367Z" title="更新于 2021-01-01 20:10:50">2021-01-01</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Flink/">Flink</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">6.5k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>21分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>我们将介绍时间语义，并描述流中不同的时间概念。我们将讨论流处理器在乱序事件流的情况下如何提供准确的计算结果，以及我们如何处理历史事件流，如何在流中进行时间旅行。</p>
+<blockquote>
+<p>时间旅行。乱序事件流，更有古老数据的事件。</p>
+</blockquote>
+<h2 id="不同的时间语义"><a href="#不同的时间语义" class="headerlink" title="不同的时间语义"></a>不同的时间语义</h2><p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/Snipaste_2020-12-23_19-05-44.png" alt="Snipaste_2020-12-23_19-05-44"></p>
+<ul>
+<li>Event Time：事件的创建事件。（除了未开源的Google DataFlow外，Flink是唯一支持事件时间的）</li>
+<li>Ingestion Time：数据进入Flink的时间</li>
+<li>Processing Time：执行操作算子的<strong>本地系统时间</strong>，与机器相关</li>
+</ul>
+<h2 id="更加形象的事件时间"><a href="#更加形象的事件时间" class="headerlink" title="更加形象的事件时间"></a>更加形象的事件时间</h2><p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/Snipaste_2020-12-23_19-07-29.png" alt="Snipaste_2020-12-23_19-07-29"></p>
+<p>1977-2015是处理时间、星球大战1-星球大战7是事件时间。</p>
+<ul>
+<li>不同的时间语义有不同的应用场合</li>
+<li>我们往往更关心事件时间（Event Time）</li>
+</ul>
+<hr>
+<h1 id="事件时间"><a href="#事件时间" class="headerlink" title="事件时间"></a>事件时间</h1><p>事件时间是流中的事件实际发生的时间。事件时间基于流中的事件所包含的时间戳。<font color="red">通常情况下，在事件进入流处理程序前，事件数据就已经包含了时间戳</font>。下图展示了事件时间窗口将会正确的将事件分发到窗口中去。可以如实反应事情是怎么发生的。即使事件可能存在延迟。</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/spaf_0213.png"></p>
+<p>事件时间使得计算结果的过程不需要依赖处理数据的速度。基于事件时间的操作是可以预测的，而计算结果也是确定的。无论流处理程序处理流数据的速度快或是慢，无论事件到达流处理程序的速度快或是慢，事件时间窗口的计算结果都是一样的。因为它采用的是事件中的时间</p>
+<p><font color="red">如果使用事件时间，即使碰到了事件乱序到达的情况，我们也可以保证结果的正确性</font>。还有，当我们在处理可以重播的流数据时，由于时间戳的确定性，我们可以快进过去。也就是说，我们可以重播一条流，然后分析历史数据，就好像流中的事件是实时发生一样。另外，我们可以快进历史数据来使我们的应用程序追上现在的事件，然后应用程序仍然是一个实时处理程序，而且业务逻辑不需要改变。</p>
+<h2 id="代码中设置事件时间"><a href="#代码中设置事件时间" class="headerlink" title="代码中设置事件时间"></a>代码中设置事件时间</h2><p>我们可以直接在代码中，对执行环境调用<code>setStreamTimeCharacteristic</code>方法，设置流的时间特性；具体的时间，<strong>还需要从数据中提取时间戳（timestamp）</strong>（<font color="red">必须</font>）</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> env: <span class="type">StreamExecutionEnvironment</span> = <span class="type">StreamExecutionEnvironment</span>.getExecutionEnvironment</span><br><span class="line"><span class="comment">// 设置流的时间特征</span></span><br><span class="line">env.setStreamTimeCharacteristic(<span class="type">TimeCharacteristic</span>.<span class="type">EventTime</span>)</span><br></pre></td></tr></table></figure>
+
+<p><strong>提取时间戳+设置水位线</strong></p>
+<p><a href="#%E6%B0%B4%E4%BD%8D%E7%BA%BF%E7%9A%84%E5%BC%95%E5%85%A5">查看</a></p>
+<h2 id="事件时间怎么解决乱序数据"><a href="#事件时间怎么解决乱序数据" class="headerlink" title="事件时间怎么解决乱序数据"></a>事件时间怎么解决乱序数据</h2><p>乱序数据会让窗口计算不准确</p>
+<p>如图，被圆圈圈住得数据是当前事件得事件时间（发生事件得时间），而事件得顺序就是事件到达Flink得顺序。</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/Snipaste_2020-12-23_19-34-40.png" alt="Snipaste_2020-12-23_19-34-40"></p>
+<p>假如，我们开了一个时间长度为5s得事件时间窗口。因为是事件时间窗口，当事件时间为5s得事件到达时，我们这个0-5得时间窗口就能关闭了吗，就能认为这个窗口得数据都到达了吗？</p>
+<p>答案是不能的，如果是处理时间的窗口，那么过了5S窗口就直接关闭了，它使用机器时间。但是事件时间窗口使用的是事件的时间，这个时间他在数据里，虽然第5s的数据到了，但没人能保证5S之前的数据会不会由于网络、分布式等原因迟到，会导致乱序数据的产生，或者第5s有没有多条数据。</p>
+<p>那么如果是事件事件窗口得话，这个窗口就永久不关闭吗，这样大量窗口在处理，会拖垮程序的。</p>
+<p><font color="red"><strong>这时候提出了水位线的概念，来代表事件时间数据流的时间流动进度。</strong></font></p>
+<h1 id="水位线（WaterMark）🔺"><a href="#水位线（WaterMark）🔺" class="headerlink" title="水位线（WaterMark）🔺"></a>水位线（WaterMark）🔺</h1><p>提出水位线之前，我们可以列举几个事件时间窗口得问题：</p>
+<ul>
+<li>怎样避免乱序数据带来计算不正确？<ul>
+<li>Watermark 是用于处理乱序事件的，而正确的处理乱序事件，通常用Watermark 机制结合 window 来实现；</li>
+</ul>
+</li>
+<li>我们应该怎样去决定何时触发事件时间窗口的计算？（怎么关闭时间窗口）</li>
+</ul>
+<p><strong>watermark 用来让程序自己平衡延迟和结果正确性</strong></p>
+<p>在本小节中，我们将会看到如何使用水位线来设置事件时间窗口的行为。</p>
+<hr>
+<p>水位线是时间全局进度的度量标准。<strong>系统可以确信在一个时间点之后，不会有早于这个时间点发生的事件到来了。</strong>本质上，水位线提供了一个逻辑时钟，这个逻辑时钟告诉系统当前的事件时间。当一个运算符接收到含有时间T的水位线时，这个运算符会认为早于时间T的发生的事件已经全部都到达了。<strong>对于事件时间窗口和乱序事件的处理，水位线非常重要。</strong><font color="red">运算符一旦接收到水位线，运算符会认为一段时间内发生的所有事件都已经观察到，可以触发针对这段时间内所有事件的计算了。</font></p>
+<blockquote>
+<p><strong>系统可以确信在一个时间点之后，不会有早于这个时间点发生的事件到来了。</strong></p>
+<p>（只是这样规定的，实际上还是有可能有早于这个时间点发生的事件到来，这时事件被称为迟到事件，默认迟到事件被丢弃。后面有单独的迟到事件的处理章节）</p>
+</blockquote>
+<h2 id="水位线作用"><a href="#水位线作用" class="headerlink" title="水位线作用"></a>水位线作用</h2><p>水位线提供了一种<strong>结果可信度和延时之间的妥协</strong>。激进的水位线设置可以保证低延迟，但结果的准确性不够。在这种情况下，<strong>迟到的事件有可能晚于水位线到达，我们需要编写一些代码来处理迟到事件</strong>。另一方面，<strong>如果水位线设置的过于宽松，计算的结果准确性会很高，但可能会增加流处理程序不必要的延时</strong>。</p>
+<blockquote>
+<p>白话讲</p>
+<p><strong>结果可信度和延时之间的妥协</strong>：</p>
+<p>就是说水位线时有一个最大延迟时间的概念，加入最大的事件时间到了是10S，但是最大延迟时间是5S，那么当前水位线就是5S，那么0-10S的窗口就不会关闭计算，它在等待因为某些原因还没有到的0-10S的事件。</p>
+<p>一方面：</p>
+<p>当最大时间时间到了15S，最大延迟时间是5S，那么当前水位线就是10S。即0-10S的窗口已经关闭开始了计算，那么之后到的0-10S的事件事件数据就是迟到事件，需要编写一些代码来处理（默认丢弃）</p>
+<p>另一方面：</p>
+<p>如果将水位线设置的宽松，准确性就会提高。例如放大最大延迟时间，但是可能会增加流处理程序不必要的延时</p>
+</blockquote>
+<p>如图，设时间窗口大小为10S，最大延迟事件为5S。</p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/Snipaste_2020-12-23_21-13-13.png" alt="Snipaste_2020-12-23_21-13-13"></p>
+<hr>
+<p>在13S到达时，水位线为7S。</p>
+<ul>
+<li>这时如果没有更大的事件时间到来时，那么这个时间段内所有0-10S的数据都会进入窗口。</li>
+<li>当15S的事件时间到达时，水位线为10S。0-10S的窗口将被计算并且关闭。</li>
+<li>如果在15S的事件时间到达后，又来临了0-10S的事件时间。它们默认将被抛弃，除了写了专门处理的代码</li>
+</ul>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/Snipaste_2020-12-23_21-22-39.png" alt="Snipaste_2020-12-23_21-22-39"></p>
+<h2 id="水位线特点🔺"><a href="#水位线特点🔺" class="headerlink" title="水位线特点🔺"></a>水位线特点🔺</h2><ul>
+<li>watermark默认每200ms插入一次，由程序员编码插入。可以使用<code>env.getConfig.setAutoWatermarkInterval(5000)</code>方法进行设置。</li>
+<li>Watermark 是一种衡量 Event Time 进展的机制，可以设定延迟触发</li>
+<li>watermark 必须单调递增，以确保任务的事件时间时钟在向前推进，而不是在后退</li>
+<li>只有事件时间需要水位线，水位线只有在窗口计算时才有用，事件时间可以设置最大延迟时间</li>
+<li><font color="red">系统认为时间戳小于水位线的事件都已经到达了</font></li>
+<li><font color="red">事件时间窗口的闭合触发规则：水位线大于等于窗口结束时间</font></li>
+<li><font color="red"><code>watermark  = 最大事件时间 - 最大延迟时间</code></font></li>
+</ul>
+<blockquote>
+<p>通常，当水位线超过窗口结束时间时，窗口将不再接收事件，然后触发计算，计算完毕，窗口被销毁</p>
+</blockquote>
+<hr>
+<blockquote>
+<p> 通常都是在流之后立马设置水位线，因为经过分流后在设置水位线，流之间的水位线会很乱</p>
+</blockquote>
+<h2 id="水位线的引入"><a href="#水位线的引入" class="headerlink" title="水位线的引入"></a>水位线的引入</h2><h3 id="自带"><a href="#自带" class="headerlink" title="自带"></a>自带</h3><p><strong>对于排好序的数据，不需要延迟触发，可以只指定时间戳就行了</strong></p>
+<p>当10S到达后，因为窗口是左闭右开，这个10S不会立马加入窗口计算，<font color="red">所以当前水位线是最大事件时间-1ms。</font></p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 时间戳必须是ms，根据自己需求写</span></span><br><span class="line">dataStream.assignAscendingTimestamps(_timestamp * <span class="number">1000</span>)</span><br></pre></td></tr></table></figure>
+
+<p><strong>对于乱序数据，需要来设置延迟时间，来解决问题</strong></p>
+<p>即设置最大延迟时间</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">.assignTimestampsAndWatermarks(</span><br><span class="line">       <span class="comment">// 设置最大延迟时间为5S</span></span><br><span class="line">       <span class="keyword">new</span> <span class="type">BoundedOutOfOrdernessTimestampExtractor</span>[(<span class="type">String</span>, <span class="type">Long</span>)](<span class="type">Time</span>.seconds(<span class="number">5</span>)) &#123;</span><br><span class="line">         <span class="comment">// 设置那个元素是事件自带的</span></span><br><span class="line">       <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">extractTimestamp</span></span>(t: (<span class="type">String</span>, <span class="type">Long</span>)) = t._2</span><br><span class="line">     &#125;)</span><br></pre></td></tr></table></figure>
+
+<h3 id="自定义"><a href="#自定义" class="headerlink" title="自定义"></a>自定义</h3><p>我们知道默认的水平线计算规则为<code>最大事件时间-最大延迟时间</code>，即<code>BoundedOutOfOrdernessTimestampExtractor</code>类的实现。而且是每隔200ms插入一次。</p>
+<p>Flink提供了接口，我们可以自定义实现水平线的实现逻辑，即它的计算规则可以更改，并且它的插入也可以更改（规则性插入|不规则插入），分别对应着两个接口：</p>
+<ol>
+<li><code>AssignerWithPeriodicWatermarks</code>：<a href="#%E5%91%A8%E6%9C%9F%E6%80%A7%E7%9A%84%E7%94%9F%E6%88%90%E6%B0%B4%E4%BD%8D%E7%BA%BF">周期性的生成水位线</a></li>
+<li><code>AssignerWithPunctuatedWatermarks</code>：<a href="#%E5%A6%82%E4%BD%95%E4%BA%A7%E7%94%9F%E4%B8%8D%E8%A7%84%E5%88%99%E7%9A%84%E6%B0%B4%E4%BD%8D%E7%BA%BF">产生不规则的水位线</a></li>
+</ol>
+<h4 id="周期性的生成水位线"><a href="#周期性的生成水位线" class="headerlink" title="周期性的生成水位线"></a>周期性的生成水位线</h4><p>周期性的生成水位线：系统会周期性的将水位线插入到流中（水位线也是一种特殊的事件!）。默认周期是200毫秒，也就是说，系统会每隔200毫秒就往流中插入一次水位线。</p>
+<blockquote>
+<p>这里的200毫秒是机器时间！</p>
+</blockquote>
+<p>可以使用<code>ExecutionConfig.setAutoWatermarkInterval()</code>方法进行设置。</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> env = <span class="type">StreamExecutionEnvironment</span>.getExecutionEnvironment</span><br><span class="line">env.setStreamTimeCharacteristic(<span class="type">TimeCharacteristic</span>.<span class="type">EventTime</span>)</span><br><span class="line"><span class="comment">// 每隔5秒产生一个水位线</span></span><br><span class="line">env.getConfig.setAutoWatermarkInterval(<span class="number">5000</span>)</span><br></pre></td></tr></table></figure>
+
+<p>上面的例子产生水位线的逻辑：每隔5秒钟，Flink会调用AssignerWithPeriodicWatermarks中的getCurrentWatermark()方法。如果方法返回的时间戳大于之前水位线的时间戳，新的水位线会被插入到流中。这个检查保证了水位线是单调递增的。如果方法返回的时间戳小于等于之前水位线的时间戳，则不会产生新的水位线。</p>
+<hr>
+<p>例子，自定义一个周期性的时间戳抽取</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">PeriodicAssigner</span> <span class="keyword">extends</span> <span class="title">AssignerWithPeriodicWatermarks</span>[<span class="type">SensorReading</span>] </span>&#123;</span><br><span class="line">  <span class="keyword">val</span> bound = <span class="number">60</span> * <span class="number">1000</span> <span class="comment">// 默认，延时为1分钟</span></span><br><span class="line">  <span class="keyword">var</span> maxTs = <span class="type">Long</span>.<span class="type">MinValue</span> + bound <span class="comment">// 观察到的最大时间戳</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">getCurrentWatermark</span></span>: <span class="type">Watermark</span> &#123;</span><br><span class="line">      <span class="comment">// 设置水位线，默认规则</span></span><br><span class="line">    <span class="keyword">new</span> <span class="type">Watermark</span>(maxTs - bound)</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 每个事件到来都会执行，更新最大事件时间戳</span></span><br><span class="line">  <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">extractTimestamp</span></span>(r: <span class="type">SensorReading</span>, previousTS: <span class="type">Long</span>) &#123;</span><br><span class="line">    maxTs = maxTs.max(r.timestamp)</span><br><span class="line">    r.timestamp</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上述代码的逻辑就是<code>BoundedOutOfOrdernessTimestampExtractor</code>的逻辑。</p>
+<h4 id="如何产生不规则的水位线"><a href="#如何产生不规则的水位线" class="headerlink" title="如何产生不规则的水位线"></a><a href="#%E5%A6%82%E4%BD%95%E4%BA%A7%E7%94%9F%E4%B8%8D%E8%A7%84%E5%88%99%E7%9A%84%E6%B0%B4%E4%BD%8D%E7%BA%BF">如何产生不规则的水位线</a></h4><p>有时候输入流中会包含一些用于指示系统进度的特殊元组或标记。Flink为此类情形以及可根据输入元素生成水位线的情形提供了<code>AssignerWithPunctuatedWatermarks</code>接口。该接口中的<code>checkAndGetNextWatermark()</code>方法会在针对每个事件的<code>extractTimestamp()</code>方法后立即调用。它可以决定是否生成一个新的水位线。<strong>如果该方法返回一个非空、且大于之前值的水位线，算子就会将这个新水位线发出。</strong></p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">PunctuatedAssigner</span> <span class="keyword">extends</span> <span class="title">AssignerWithPunctuatedWatermarks</span>[<span class="type">SensorReading</span>] </span>&#123;</span><br><span class="line">  <span class="keyword">val</span> bound = <span class="number">60</span> * <span class="number">1000</span></span><br><span class="line"></span><br><span class="line">  <span class="comment">// 每来一条数据就调用一次</span></span><br><span class="line">  <span class="comment">// 紧跟`extractTimestamp`函数调用</span></span><br><span class="line">  <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">checkAndGetNextWatermark</span></span>(r: <span class="type">SensorReading</span>, extractedTS: <span class="type">Long</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> (r.id == <span class="string">&quot;sensor_1&quot;</span>) &#123;</span><br><span class="line">      <span class="comment">// 抽取的时间戳 - 最大延迟时间</span></span><br><span class="line">      <span class="keyword">new</span> <span class="type">Watermark</span>(extractedTS - bound)</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// 不产生时间戳</span></span><br><span class="line">      <span class="literal">null</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 每来一条数据就调用一次</span></span><br><span class="line">  <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">extractTimestamp</span></span>(r: <span class="type">SensorReading</span>, previousTS: <span class="type">Long</span>) &#123;</span><br><span class="line">    r.timestamp</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="最大延迟时间的设置"><a href="#最大延迟时间的设置" class="headerlink" title="最大延迟时间的设置"></a>最大延迟时间的设置</h2><p>完美的水位线永远不会错：时间戳小于水位线的事件不会再出现。在特殊情况下(例如非乱序事件流)，最近一次事件的时间戳就可能是完美的水位线。启发式水位线则相反，它只估计时间，因此有可能出错，即迟到的事件(其时间戳小于水位线标记时间)晚于水位线出现。针对启发式水位线，Flink提供了处理迟到元素的机制。</p>
+<p><strong>设定水位线通常需要用到领域知识。</strong>举例来说，如果知道事件的迟到时间不会超过5秒，就可以将水位线标记时间设为收到的最大时间戳减去5秒。另一种做法是，采用一个Flink作业监控事件流，学习事件的迟到规律，并以此构建水位线生成模型。</p>
+<p>如果最大延迟时间设置的很大，计算出的结果会更精确，但收到计算结果的速度会很慢，同时系统会缓存大量的数据，并对系统造成比较大的压力。如果最大延迟时间设置的很小，那么收到计算结果的速度会很快，但可能收到错误的计算结果。不过Flink处理迟到数据的机制可以解决这个问题。上述问题看起来很复杂，但是恰恰符合现实世界的规律：大部分真实的事件流都是乱序的，并且通常无法了解它们的乱序程度(因为理论上不能预见未来)。水位线是唯一让我们直面乱序事件流并保证正确性的机制; 否则只能选择忽视事实，假装错误的结果是正确的。</p>
+<blockquote>
+<ul>
+<li>思考题一：实时程序，要求实时性非常高，并且结果并不一定要求非常准确，那么应该怎么办？</li>
+<li>回答：直接使用处理时间。</li>
+<li>思考题二：如果要进行时间旅行，也就是要还原以前的数据集当时的流的状态，应该怎么办？</li>
+<li>回答：使用事件时间。使用Hive将数据集先按照时间戳升序排列，再将最大延迟时间设置为0。</li>
+</ul>
+</blockquote>
+<h2 id="水位线、事件窗口的验证🔺"><a href="#水位线、事件窗口的验证🔺" class="headerlink" title="水位线、事件窗口的验证🔺"></a>水位线、事件窗口的验证🔺</h2><p>因为是验证窗口与水位线的关系，所以我们需要一个函数能同时获取窗口的基本信息（开始结束时间）和水位线的。</p>
+<p>这就是前面提到的<code>PrcessWindowFunction</code>，因为要获取获取窗口的基本信息。所以，增量聚合函数在这里行不通。</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 测试 水位线和窗口结束时间结束 的关系</span></span><br><span class="line"><span class="class"><span class="keyword">object</span> <span class="title">Test2</span> </span>&#123;</span><br><span class="line">  <span class="function"><span class="keyword">def</span> <span class="title">main</span></span>(args: <span class="type">Array</span>[<span class="type">String</span>]): <span class="type">Unit</span> = &#123;</span><br><span class="line">    <span class="keyword">val</span> env: <span class="type">StreamExecutionEnvironment</span> = <span class="type">StreamExecutionEnvironment</span>.getExecutionEnvironment</span><br><span class="line">    env.setParallelism(<span class="number">1</span>)</span><br><span class="line">    env.setStreamTimeCharacteristic(<span class="type">TimeCharacteristic</span>.<span class="type">EventTime</span>)</span><br><span class="line"></span><br><span class="line">    env.socketTextStream(<span class="string">&quot;localhost&quot;</span>, <span class="number">9000</span>, &#x27;\n&#x27;)</span><br><span class="line">      .map(r =&gt; (r.split(<span class="string">&quot; &quot;</span>)(<span class="number">0</span>), r.split(<span class="string">&quot; &quot;</span>)(<span class="number">1</span>).toLong * <span class="number">1000</span>))</span><br><span class="line">      .assignTimestampsAndWatermarks(</span><br><span class="line">        <span class="comment">// 设置最大延迟时间为5S</span></span><br><span class="line">        <span class="keyword">new</span> <span class="type">BoundedOutOfOrdernessTimestampExtractor</span>[(<span class="type">String</span>, <span class="type">Long</span>)](<span class="type">Time</span>.seconds(<span class="number">5</span>)) &#123;</span><br><span class="line">          <span class="comment">// 设置那个元素是事件自带的</span></span><br><span class="line">          <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">extractTimestamp</span></span>(t: (<span class="type">String</span>, <span class="type">Long</span>)) = t._2</span><br><span class="line">        &#125;)</span><br><span class="line">      .keyBy(r =&gt; r._1)</span><br><span class="line">      <span class="comment">// 开窗10S</span></span><br><span class="line">      .timeWindow(<span class="type">Time</span>.seconds(<span class="number">10</span>))</span><br><span class="line">      .process(<span class="keyword">new</span> <span class="type">MyProcess</span>).print()</span><br><span class="line"></span><br><span class="line">    env.execute()</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="class"><span class="keyword">class</span> <span class="title">MyProcess</span> <span class="keyword">extends</span> <span class="title">ProcessWindowFunction</span>[(<span class="type">String</span>, <span class="type">Long</span>), <span class="type">String</span>, <span class="type">String</span>, <span class="type">TimeWindow</span>] </span>&#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">process</span></span>(key: <span class="type">String</span>, context: <span class="type">Context</span>, elements: <span class="type">Iterable</span>[(<span class="type">String</span>, <span class="type">Long</span>)], out: <span class="type">Collector</span>[<span class="type">String</span>]): <span class="type">Unit</span> = &#123;</span><br><span class="line">      <span class="keyword">val</span> startTime: <span class="type">String</span> = <span class="keyword">new</span> <span class="type">Timestamp</span>(context.window.getStart).toString</span><br><span class="line">      <span class="keyword">val</span> endTime: <span class="type">String</span> = <span class="keyword">new</span> <span class="type">Timestamp</span>(context.window.getEnd).toString</span><br><span class="line">      out.collect(<span class="string">s&quot;窗口的大小为：<span class="subst">$startTime</span>-<span class="subst">$endTime</span>\t窗口内的元素为：<span class="subst">$elements</span>\t个数为：<span class="subst">$&#123;elements.size&#125;</span>&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol>
+<li>输入2，5，8，9，10。发现窗口没有反应，即第一个窗口没有关闭</li>
+<li>输入12，15。发现窗口关闭了，当输入15时，水平线为10.正好大于等于第一个窗口的结束时间，所以窗口开始计算</li>
+<li>看到日志第一个窗口没有10S，<strong>因为窗口是左闭右开的。</strong></li>
+</ol>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20201224163855851.png" alt="image-20201224163855851"></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20201224160149977.png" alt="image-20201224160149977"></p>
+<h2 id="水位线的传递"><a href="#水位线的传递" class="headerlink" title="水位线的传递"></a>水位线的传递</h2><p>每个流都有着自己的水位线，在进行流合并时，水位线是怎么传递的呢？</p>
+<p><font color="red"><strong>一个流在一个分区中就有一个水位线</strong></font></p>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/image-20210101195833056.png" alt="image-20210101195833056"></p>
+<blockquote>
+<ol>
+<li>在map_1和map_2都有自己的水位线</li>
+<li>在发往分区1，2时，它们各自的水位线都发送，每个分区只将最小的水位线当最此分区此操作的水位线</li>
+</ol>
+</blockquote>
+<p><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/spaf_0309.png"></p>
+<hr>
+<h1 id="处理函数"><a href="#处理函数" class="headerlink" title="处理函数"></a>处理函数</h1><p>我们之前学习的转换算子<strong>是无法访问事件的时间戳信息和水位线信息的。</strong>而这在一些应用场景下，极为重要。例如MapFunction这样的map转换算子就无法访问时间戳或者当前事件的事件时间。</p>
+<p>基于此，DataStream API提供了一系列的<strong>Low-Level转换算子。可以访问时间戳、水位线以及注册定时事件。</strong>还可以输出特定的一些事件，例如超时事件等。Process Function用来构建事件驱动的应用以及实现自定义的业务逻辑(使用之前的window函数和转换算子无法实现)。<strong>例如，Flink-SQL就是使用Process Function实现的。</strong></p>
+<blockquote>
+<p>Process Function都是Rich Function</p>
+</blockquote>
+<p><code>Flink</code>提供了8个Process Function：</p>
+<ul>
+<li>ProcessFunction</li>
+<li>KeyedProcessFunction</li>
+<li>CoProcessFunction</li>
+<li>ProcessJoinFunction</li>
+<li>BroadcastProcessFunction</li>
+<li>KeyedBroadcastProcessFunction</li>
+<li>ProcessWindowFunction</li>
+<li>ProcessAllWindowFunction</li>
+</ul>
+<p>我们这里详细介绍一下KeyedProcessFunction。</p>
+<p><strong><em>KeyedProcessFunction</em></strong></p>
+<p>KeyedProcessFunction用<strong>来操作KeyedStream</strong>。KeyedProcessFunction<strong>会处理流的每一个元素，输出为0个、1个或者多个元素</strong>。<strong>所有的Process Function都继承自RichFunction接口</strong>，所以都有open()、close()和getRuntimeContext()等方法。而KeyedProcessFunction[KEY, IN, OUT]还额外提供了两个方法:</p>
+<ol>
+<li><code>processElement(v: IN, ctx: Context, out: Collector[OUT])</code>, 流中的<strong>每一个元素都会调用这个方法</strong>，调用结果将会放在Collector数据类型中输出。<strong>Context可以访问元素的时间戳，元素的key，以及TimerService时间服务</strong>。**Context还可以将结果输出到别的流(side outputs)**（后面讲#<a href="#%E4%BE%A7%E8%BE%93%E5%87%BA%E6%B5%81">侧输出流</a>）。</li>
+<li><code>onTimer(timestamp: Long, ctx: OnTimerContext, out: Collector[OUT])</code>是一个回调函数。当之前<font color="red"><strong>注册的定时器触发时调用</strong></font>。参数timestamp为定时器所设定的触发的时间戳。Collector为输出结果的集合。OnTimerContext和processElement的Context参数一样，提供了上下文的一些信息，例如firing trigger的时间信息(事件时间或者处理时间)。</li>
+</ol>
+<h2 id="时间服务和定时器"><a href="#时间服务和定时器" class="headerlink" title="时间服务和定时器"></a><a href="#%E6%97%B6%E9%97%B4%E6%9C%8D%E5%8A%A1%E5%92%8C%E5%AE%9A%E6%97%B6%E5%99%A8">时间服务和定时器</a></h2><p>Context和OnTimerContext所持有的TimerService对象拥有以下方法:</p>
+<ul>
+<li><code>currentProcessingTime(): Long</code> 返回当前处理时间</li>
+<li><code>currentWatermark(): Long</code> 返回当前水位线的时间戳</li>
+<li><code>registerProcessingTimeTimer(timestamp: Long): Unit</code> 会注册当前key的processing time的timer。当processing time到达定时时间时，触发timer。</li>
+<li><code>registerEventTimeTimer(timestamp: Long): Unit</code> 会注册当前key的event time timer。当水位线大于等于定时器注册的时间时，触发定时器执行回调函数。</li>
+<li><code>deleteProcessingTimeTimer(timestamp: Long): Unit</code> 删除之前注册处理时间定时器。如果没有这个时间戳的定时器，则不执行。</li>
+<li><code>deleteEventTimeTimer(timestamp: Long): Unit</code> 删除之前注册的事件时间定时器，如果没有此时间戳的定时器，则不执行。</li>
+</ul>
+<p>当定时器timer触发时，执行回调函数onTimer()。<strong>processElement()方法和onTimer()方法是同步（不是异步）方法，这样可以避免并发访问和操作状态。</strong></p>
+<p><strong>针对每一个key和timestamp，只能注册一个定期器</strong>。也就是说，每一个key可以注册多个定时器，但在每一个时间戳只能注册一个定时器。KeyedProcessFunction默认将所有定时器的时间戳放在一个优先队列中。在Flink做检查点操作时，定时器也会被保存到状态后端中。</p>
+<p>举个例子说明KeyedProcessFunction如何操作KeyedStream。</p>
+<p>下面的程序展示了如何监控温度传感器的温度值，如果温度值在一秒钟之内(processing time)连续上升，报警。</p>
+<p>原理：通过状态变量（流中保留之前流数据的计算结果，每当新的数据到到达时，更新保存的状态变量）比较当前温度和上一个温度，如果大于的话，创建一个1S后的定时器报警；如果小于的话，取消之前的报警器。这样如果1S中之内报警器没有被取消的话，证明1S内温度在不断上升！</p>
+<p>主要程序：（为什么使用状态变量，因为防止宕机后，丢失数据（状态变量可以存在hdfs上，初始化时读取，没有再初始化），使用状态变量的话得用懒执行，因为不用懒执行的话，初始化时<code>getRuntimeContext</code>还没有）</p>
+<blockquote>
+<p>需要注意我没有设置并行度，如果你的程序没有输出结果的话，是因为一般电脑的核数为8|16，所以addSource的并行度为8|16，而每个addSource在每s每个id大约会生成3条数据（根据300ms计算的得出），而乘以并行度8最后为24条，这时只有24条记录连续上升才会导致报警触发，所以很难出现结果。大家们可以单独将addSource的并行度设置为1</p>
+</blockquote>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> org.apache.flink.api.common.state.&#123;<span class="type">ValueState</span>, <span class="type">ValueStateDescriptor</span>&#125;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.scala.typeutils.<span class="type">Types</span></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.functions.<span class="type">KeyedProcessFunction</span></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.scala._</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.util.<span class="type">Collector</span></span><br><span class="line"><span class="keyword">import</span> org.example.flink.source.&#123;<span class="type">SensorReading</span>, <span class="type">SensorSource</span>&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">object</span> <span class="title">TemperatureMonitor</span> </span>&#123;</span><br><span class="line">  <span class="function"><span class="keyword">def</span> <span class="title">main</span></span>(args: <span class="type">Array</span>[<span class="type">String</span>]): <span class="type">Unit</span> = &#123;</span><br><span class="line">    <span class="keyword">val</span> env: <span class="type">StreamExecutionEnvironment</span> = <span class="type">StreamExecutionEnvironment</span>.getExecutionEnvironment</span><br><span class="line"></span><br><span class="line">    <span class="keyword">val</span> source: <span class="type">DataStream</span>[<span class="type">SensorReading</span>] = env.addSource(<span class="keyword">new</span> <span class="type">SensorSource</span>)</span><br><span class="line">    source.keyBy(r =&gt; r.id).process(<span class="keyword">new</span> <span class="type">MykeyedFunction</span>).print()</span><br><span class="line"></span><br><span class="line">    env.execute()</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="class"><span class="keyword">class</span> <span class="title">MykeyedFunction</span> <span class="keyword">extends</span> <span class="title">KeyedProcessFunction</span>[<span class="type">String</span>, <span class="type">SensorReading</span>, <span class="type">String</span>] </span>&#123;</span><br><span class="line">    <span class="comment">// 定义状态变量，使用懒执行</span></span><br><span class="line">    <span class="comment">// 懒加载；</span></span><br><span class="line">    <span class="comment">// 状态变量会在检查点操作时进行持久化，例如hdfs</span></span><br><span class="line">    <span class="comment">// 只会初始化一次，单例模式</span></span><br><span class="line">    <span class="comment">// 在当机重启程序时，首先去持久化设备寻找名为`last-temp`的状态变量，如果存在，则直接读取。不存在，则初始化。</span></span><br><span class="line">    <span class="comment">// 流中上次温度，通过对比本次温度和上次温度，来看温度的上升/下降趋势  下降的话 取消之前设置的定时报警</span></span><br><span class="line">    <span class="keyword">lazy</span> <span class="keyword">val</span> perTemperature: <span class="type">ValueState</span>[<span class="type">Double</span>] = getRuntimeContext.getState(<span class="keyword">new</span> <span class="type">ValueStateDescriptor</span>[<span class="type">Double</span>]</span><br><span class="line">    (<span class="string">&quot;last-temperature&quot;</span>, <span class="type">Types</span>.of[<span class="type">Double</span>]))</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 之前设置的报警时间，当温度下降时需要获取之前设置的报警器的时间，通过时间来删除报警器</span></span><br><span class="line">    <span class="keyword">lazy</span> <span class="keyword">val</span> time: <span class="type">ValueState</span>[<span class="type">Long</span>] = getRuntimeContext.getState(<span class="keyword">new</span> <span class="type">ValueStateDescriptor</span>[<span class="type">Long</span>]</span><br><span class="line">    (<span class="string">&quot;time&quot;</span>, <span class="type">Types</span>.of[<span class="type">Long</span>]))</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 每个流的元素都会执行一遍</span></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">processElement</span></span>(i: <span class="type">SensorReading</span>, context: <span class="type">KeyedProcessFunction</span>[<span class="type">String</span>, <span class="type">SensorReading</span>, <span class="type">String</span>]#<span class="type">Context</span>, collector: <span class="type">Collector</span>[<span class="type">String</span>]): <span class="type">Unit</span> = &#123;</span><br><span class="line">      <span class="comment">// 获取上次温度</span></span><br><span class="line">      <span class="keyword">val</span> lastTemperature: <span class="type">Double</span> = perTemperature.value()</span><br><span class="line">      <span class="comment">// 更新温度的状态变量</span></span><br><span class="line">      perTemperature.update(i.temperature)</span><br><span class="line">      <span class="keyword">val</span> curTime: <span class="type">Long</span> = time.value()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">      <span class="comment">// 如果是第一条温度，则上条温度为0 || 本地温度比上次温度低   当前是初始化或降温趋势，删除定时任务</span></span><br><span class="line">      <span class="keyword">if</span> (lastTemperature == <span class="number">0.0</span> || i.temperature&lt;lastTemperature) &#123;</span><br><span class="line">        <span class="comment">// 删除报警器，并清空定时器的状态变量</span></span><br><span class="line">        context.timerService().deleteProcessingTimeTimer(curTime)</span><br><span class="line">        time.clear()</span><br><span class="line">        <span class="comment">// 如果是温度处于上升趋势||定时器是未设置  则要设置定时器</span></span><br><span class="line">      &#125;<span class="keyword">else</span> <span class="keyword">if</span>(i.temperature&gt; lastTemperature  &amp;&amp; curTime==<span class="number">0</span>)&#123;</span><br><span class="line">        <span class="comment">// 1S 内  如果温度没有下降趋势，即没有取消定时器，则报警</span></span><br><span class="line">        <span class="keyword">val</span> l: <span class="type">Long</span> = context.timerService().currentProcessingTime() + <span class="number">1000</span></span><br><span class="line">        context.timerService().registerProcessingTimeTimer(l)</span><br><span class="line">        time.update(l)</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 不要按照注释那样写，血的教训  这样写 定时事件的时间和状态变量存储的时间不同，导致无法删除应该删除的定时事件</span></span><br><span class="line"><span class="comment">//        context.timerService().registerProcessingTimeTimer(context.timerService().currentProcessingTime() + 1000)</span></span><br><span class="line"><span class="comment">//        time.update(context.timerService().currentProcessingTime() + 1000)</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 定时器触发时执行的逻辑</span></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">onTimer</span></span>(timestamp: <span class="type">Long</span>, ctx: <span class="type">KeyedProcessFunction</span>[<span class="type">String</span>, <span class="type">SensorReading</span>, <span class="type">String</span>]#<span class="type">OnTimerContext</span>, out: <span class="type">Collector</span>[<span class="type">String</span>]): <span class="type">Unit</span> = &#123;</span><br><span class="line">      out.collect(<span class="string">s&quot;温度计id为<span class="subst">$&#123;ctx.getCurrentKey&#125;</span>的实例温度在1S内连续上升！&quot;</span>)</span><br><span class="line">      <span class="comment">// 不清空的话，如果温度继续上升则无法进行下一次的报警</span></span><br><span class="line">      time.clear()</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+<p>为了更好的展示结果，构造数据需要减少产生量：</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> org.example.flink.source</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.util.<span class="type">Calendar</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.functions.source.<span class="type">SourceFunction</span>.<span class="type">SourceContext</span></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.functions.source.&#123;<span class="type">RichParallelSourceFunction</span>, <span class="type">SourceFunction</span>&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> scala.util.<span class="type">Random</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 生成随机数据</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">SensorSource</span> <span class="keyword">extends</span> <span class="title">RichParallelSourceFunction</span>[<span class="type">SensorReading</span>] </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">var</span> running = <span class="literal">true</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">run</span></span>(sourceContext: <span class="type">SourceContext</span>[<span class="type">SensorReading</span>]): <span class="type">Unit</span> = &#123;</span><br><span class="line">    <span class="keyword">val</span> rand = <span class="keyword">new</span> <span class="type">Random</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">var</span> curFTemp = (<span class="number">1</span> to <span class="number">10</span>).map(</span><br><span class="line">      i =&gt; (<span class="string">&quot;sensor_&quot;</span> + i, rand.nextGaussian() * <span class="number">20</span>)</span><br><span class="line">    )</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (running) &#123;</span><br><span class="line">      curFTemp = curFTemp.map(</span><br><span class="line">        t =&gt; (t._1, t._2 + rand.nextGaussian() * <span class="number">0.5</span>)</span><br><span class="line">      )</span><br><span class="line">      <span class="keyword">val</span> curTime = <span class="type">Calendar</span>.getInstance.getTimeInMillis</span><br><span class="line"></span><br><span class="line">      curFTemp.foreach(t =&gt; sourceContext.collect(<span class="type">SensorReading</span>(t._1, curTime, t._2)))</span><br><span class="line"></span><br><span class="line">      <span class="type">Thread</span>.sleep(<span class="number">300</span>)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">cancel</span></span>(): <span class="type">Unit</span> = running = <span class="literal">false</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>只有用了Flink的流处理才能计算到连续的数据流中的状态数据变化，而如果用Spark来实现这个功能的根本实现不了的。因为：</p>
+<ul>
+<li>Spark的流处理是微批，无法监控到不同微批数据中的状态，就无法进行连续1S的数据计算</li>
+<li>如果采用批处理的话，是可以。但是数据的产生都是实时的，根本不能用批处理。写写DEMO可以，实际无用处。</li>
+</ul>
+</blockquote>
+<h1 id="侧输出流"><a href="#侧输出流" class="headerlink" title="侧输出流"></a>侧输出流</h1><p>上面我们说过水位线加上最大延迟时间可保证小幅度迟到的数据可以继续加入窗口被计算，但是如果数据迟到的离谱，这时配置最大延迟时间肯定没有用了。</p>
+<p>如果不设置它会默认舍弃这种迟到的时间。除非我们手动代码设置来处理这些数据，有2中方式。</p>
+<ol>
+<li>允许迟到的数据，一定时间内</li>
+<li>输出到侧输出流</li>
+</ol>
+<p>与之前聊过的lambda架构，批处理提供数据准确性。而Flink通过一个流处理就能保证数据准确性，也是依靠了下面三点：</p>
+<blockquote>
+<p>准确计算性的三重保证：</p>
+<ol>
+<li>watermark：将时间进度由慢的watermark调控</li>
+<li>allowedLateness：时间窗口结束时间小于等于水位线后开始聚合计算，计算后又有该时间范围内的数据到达时，迟到的数据每个元素进入都会和原窗口的结果进行聚合</li>
+<li>侧输出流：最后的数据进入侧输出流再次计算。</li>
+</ol>
+</blockquote>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">Xiangjie</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://awslzhang.top/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/">https://awslzhang.top/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://awslzhang.top" target="_blank">zxj</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Flink/">Flink</a></div><div class="post_share"><div class="social-share" data-image="https://flink.apache.org/img/flink-header-logo.svg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2020/12/17/Flink-API/"><img class="next-cover" src="https://flink.apache.org/img/flink-header-logo.svg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Flink Api学习</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2020/12/16/Flink学习笔记/" title="Flink学习笔记"><img class="cover" src="https://flink.apache.org/img/flink-header-logo.svg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-12-16</div><div class="title">Flink学习笔记</div></div></a></div><div><a href="/2020/12/17/Flink-API/" title="Flink Api学习"><img class="cover" src="https://flink.apache.org/img/flink-header-logo.svg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-12-17</div><div class="title">Flink Api学习</div></div></a></div></div></div></div><div class="aside_content" id="aside_content"><div class="card-widget card-info"><div class="card-content"><div class="card-info-avatar is-center"><img class="avatar-img" src="/null" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">Xiangjie</div><div class="author-info__description"></div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/XiangJie-Zhang" target="_blank" title="Github"><i class="fab fa-github"></i></a><a class="social-icon" href="mailto:qluzxj@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a></div></div></div><div class="card-widget card-announcement"><div class="card-content"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%8D%E5%90%8C%E7%9A%84%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89"><span class="toc-number">1.1.</span> <span class="toc-text">不同的时间语义</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9B%B4%E5%8A%A0%E5%BD%A2%E8%B1%A1%E7%9A%84%E4%BA%8B%E4%BB%B6%E6%97%B6%E9%97%B4"><span class="toc-number">1.2.</span> <span class="toc-text">更加形象的事件时间</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%BA%8B%E4%BB%B6%E6%97%B6%E9%97%B4"><span class="toc-number">2.</span> <span class="toc-text">事件时间</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%A3%E7%A0%81%E4%B8%AD%E8%AE%BE%E7%BD%AE%E4%BA%8B%E4%BB%B6%E6%97%B6%E9%97%B4"><span class="toc-number">2.1.</span> <span class="toc-text">代码中设置事件时间</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8B%E4%BB%B6%E6%97%B6%E9%97%B4%E6%80%8E%E4%B9%88%E8%A7%A3%E5%86%B3%E4%B9%B1%E5%BA%8F%E6%95%B0%E6%8D%AE"><span class="toc-number">2.2.</span> <span class="toc-text">事件时间怎么解决乱序数据</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%B0%B4%E4%BD%8D%E7%BA%BF%EF%BC%88WaterMark%EF%BC%89%F0%9F%94%BA"><span class="toc-number">3.</span> <span class="toc-text">水位线（WaterMark）🔺</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B0%B4%E4%BD%8D%E7%BA%BF%E4%BD%9C%E7%94%A8"><span class="toc-number">3.1.</span> <span class="toc-text">水位线作用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B0%B4%E4%BD%8D%E7%BA%BF%E7%89%B9%E7%82%B9%F0%9F%94%BA"><span class="toc-number">3.2.</span> <span class="toc-text">水位线特点🔺</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B0%B4%E4%BD%8D%E7%BA%BF%E7%9A%84%E5%BC%95%E5%85%A5"><span class="toc-number">3.3.</span> <span class="toc-text">水位线的引入</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%87%AA%E5%B8%A6"><span class="toc-number">3.3.1.</span> <span class="toc-text">自带</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89"><span class="toc-number">3.3.2.</span> <span class="toc-text">自定义</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%91%A8%E6%9C%9F%E6%80%A7%E7%9A%84%E7%94%9F%E6%88%90%E6%B0%B4%E4%BD%8D%E7%BA%BF"><span class="toc-number">3.3.2.1.</span> <span class="toc-text">周期性的生成水位线</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%A6%82%E4%BD%95%E4%BA%A7%E7%94%9F%E4%B8%8D%E8%A7%84%E5%88%99%E7%9A%84%E6%B0%B4%E4%BD%8D%E7%BA%BF"><span class="toc-number">3.3.2.2.</span> <span class="toc-text">如何产生不规则的水位线</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%9C%80%E5%A4%A7%E5%BB%B6%E8%BF%9F%E6%97%B6%E9%97%B4%E7%9A%84%E8%AE%BE%E7%BD%AE"><span class="toc-number">3.4.</span> <span class="toc-text">最大延迟时间的设置</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B0%B4%E4%BD%8D%E7%BA%BF%E3%80%81%E4%BA%8B%E4%BB%B6%E7%AA%97%E5%8F%A3%E7%9A%84%E9%AA%8C%E8%AF%81%F0%9F%94%BA"><span class="toc-number">3.5.</span> <span class="toc-text">水位线、事件窗口的验证🔺</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B0%B4%E4%BD%8D%E7%BA%BF%E7%9A%84%E4%BC%A0%E9%80%92"><span class="toc-number">3.6.</span> <span class="toc-text">水位线的传递</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%A4%84%E7%90%86%E5%87%BD%E6%95%B0"><span class="toc-number">4.</span> <span class="toc-text">处理函数</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%97%B6%E9%97%B4%E6%9C%8D%E5%8A%A1%E5%92%8C%E5%AE%9A%E6%97%B6%E5%99%A8"><span class="toc-number">4.1.</span> <span class="toc-text">时间服务和定时器</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%BE%A7%E8%BE%93%E5%87%BA%E6%B5%81"><span class="toc-number">5.</span> <span class="toc-text">侧输出流</span></a></li></ol></div></div></div><div class="card-widget card-recent-post"><div class="card-content"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink的时间语义和watermark"/></a><div class="content"><a class="title" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark">Flink的时间语义和watermark</a><time datetime="2020-12-23T10:59:07.000Z" title="发表于 2020-12-23 18:59:07">2020-12-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/Flink-API/" title="Flink Api学习"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Api学习"/></a><div class="content"><a class="title" href="/2020/12/17/Flink-API/" title="Flink Api学习">Flink Api学习</a><time datetime="2020-12-17T12:36:28.000Z" title="发表于 2020-12-17 20:36:28">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/ready/" title="ready!"><img src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="ready!"/></a><div class="content"><a class="title" href="/2020/12/17/ready/" title="ready!">ready!</a><time datetime="2020-12-16T16:02:06.000Z" title="发表于 2020-12-17 00:02:06">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink学习笔记"/></a><div class="content"><a class="title" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记">Flink学习笔记</a><time datetime="2020-12-16T12:29:56.000Z" title="发表于 2020-12-16 20:29:56">2020-12-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目"><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/下载.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="k8s集群监控、高可用以及部署自建Java项目"/></a><div class="content"><a class="title" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目">k8s集群监控、高可用以及部署自建Java项目</a><time datetime="2020-12-06T01:26:41.000Z" title="发表于 2020-12-06 09:26:41">2020-12-06</time></div></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By Xiangjie</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><canvas class="fireworks" mobile="false"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script></div></body></html>

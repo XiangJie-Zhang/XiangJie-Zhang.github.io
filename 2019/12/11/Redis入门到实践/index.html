@@ -1,0 +1,672 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Redis入门到实践 | zxj</title><meta name="author" content="Xiangjie"><meta name="copyright" content="Xiangjie"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="Redis简介Redis 全称为：Remote Dictionary Server（远程数据服务），是一个开源的使用C语言编写、支持网络、可基于内存还可以持久化的日志型、Key-Value数据库，并提供多种语言的API，官方推荐使用Linux部署。 官方网站： https:&#x2F;&#x2F;redis.io&#x2F;">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis入门到实践">
+<meta property="og:url" content="https://awslzhang.top/2019/12/11/Redis%E5%85%A5%E9%97%A8%E5%88%B0%E5%AE%9E%E8%B7%B5/index.html">
+<meta property="og:site_name" content="zxj">
+<meta property="og:description" content="Redis简介Redis 全称为：Remote Dictionary Server（远程数据服务），是一个开源的使用C语言编写、支持网络、可基于内存还可以持久化的日志型、Key-Value数据库，并提供多种语言的API，官方推荐使用Linux部署。 官方网站： https:&#x2F;&#x2F;redis.io&#x2F;">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg">
+<meta property="article:published_time" content="2019-12-11T02:41:07.000Z">
+<meta property="article:modified_time" content="2021-01-01T05:49:59.974Z">
+<meta property="article:author" content="Xiangjie">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg"><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://awslzhang.top/2019/12/11/Redis%E5%85%A5%E9%97%A8%E5%88%B0%E5%AE%9E%E8%B7%B5/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: Xiangjie","link":"链接: ","source":"来源: zxj","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: {"chs_to_cht":"你已切换为繁体","cht_to_chs":"你已切换为简体","day_to_night":"你已切换为深色模式","night_to_day":"你已切换为浅色模式","bgLight":"#49b1f5","bgDark":"#121212","position":"bottom-left"},
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: true,
+  isToc: true,
+  postUpdate: '2021-01-01 13:49:59'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.0.2"><link rel="alternate" href="/atom.xml" title="zxj" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/null" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">zxj</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 目录</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Redis入门到实践</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2019-12-11T02:41:07.000Z" title="发表于 2019-12-11 10:41:07">2019-12-11</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-01-01T05:49:59.974Z" title="更新于 2021-01-01 13:49:59">2021-01-01</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Redis/">Redis</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">3.1k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>11分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="Redis简介"><a href="#Redis简介" class="headerlink" title="Redis简介"></a>Redis简介</h1><p>Redis 全称为：Remote Dictionary Server（远程数据服务），是一个开源的使用C语言编写、支持网络、可基于内存还可以持久化的日志型、Key-Value数据库，并提供多种语言的API，官方推荐使用Linux部署。</p>
+<p>官方网站：<a target="_blank" rel="noopener" href="https://redis.io/"> https://redis.io/ </a></p>
+<a id="more"></a>
+
+<p>并且，Redis具有以下特征：</p>
+<ol>
+<li>数据的持久化（定期把内存中的数据写入磁盘中，重启时可以再次加载使用）</li>
+<li>丰富的数据类型：string,list,hash,set,sorted set(zset)</li>
+<li>原子性：单操作和事务都支持原子性，要么全部处理要么全不处理</li>
+<li>主从同步</li>
+</ol>
+<p>Redis的特点：</p>
+<ol>
+<li>Redis 本质上是一个 key-value 类型的数据库</li>
+<li>整个数据库都是在内存中进行操作，可定期刷新到磁盘进行持久化存储</li>
+<li>由于是在内存操作，读写能力非常好，每秒可以处理 10 万次读写操作</li>
+<li>Redis 支持多种数据结构，提供了丰富的数据类型选择</li>
+<li>Redis 同时支持数据备份，主从配置</li>
+<li>Redis 的所有操作都是原子性的</li>
+</ol>
+<br>
+
+<p><strong>如果没有redis该怎么使用本地缓存</strong></p>
+<ol>
+<li>程序中定义内存数据结构来实现， 比如说定义一个成员变量Map 或者 List 均可以实现</li>
+<li>使用开源的缓存框架 Ehcache，Ehcache 封装了对于内存操作的功能</li>
+<li>Guava Cache 是 Google 开源的工具集， 提供了缓存的边界操作工具</li>
+</ol>
+<p><strong>Redis 通讯协议是什么？有什么特点？</strong></p>
+<p>Redis 的通信协议是 Redis Serialization Protocol，简称 RESP。</p>
+<p>有如下特性：</p>
+<ol>
+<li>是二进制安全的</li>
+<li>在 TCP 层</li>
+<li>基于请求—响应的模式</li>
+</ol>
+<h1 id="Redis安装和配置"><a href="#Redis安装和配置" class="headerlink" title="Redis安装和配置"></a>Redis安装和配置</h1><p>因为redis推荐Linux部署，所以本次以Ubuntu18.04LTS为例来安装redis：</p>
+<p>首先，本次是编译安装我们要首先保证有编译环境</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get install make</span><br><span class="line">sudo apt-get install make-build</span><br><span class="line">sudo apt-get install gcc</span><br></pre></td></tr></table></figure>
+
+<p>如果嫌弃下载安装速度过慢，可以更换apt源，<a target="_blank" rel="noopener" href="https://mirror.tuna.tsinghua.edu.cn/help/ubuntu/">清华源</a>；将内容替换<code>sources.list</code>的内容即可</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cp /etc/apt/sources.list /etc/apt/sources.list.bak</span><br><span class="line">sudo vim /etc/apt/sources.list</span><br></pre></td></tr></table></figure>
+
+<p>下载和安装，自己挑选一个目录，我这里使用的是我自建的<code>/path</code>：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">sudo mkdir -p /path</span><br><span class="line"><span class="built_in">cd</span> /path</span><br><span class="line">sudo wget http://download.redis.io/releases/redis-5.0.7.tar.gz</span><br><span class="line">sudo tar -zxvf redis-5.0.7.tar.gz</span><br><span class="line"><span class="built_in">cd</span> redis-5.0.7/</span><br><span class="line">sudo make</span><br></pre></td></tr></table></figure>
+
+<p>编译安装完成，启动服务：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">sudo mkdir -p /path/redis.log</span><br><span class="line">sudo chmod 777 /path/redis.log</span><br><span class="line">sudo /path/redis-5.0.7/src/redis-server /path/redis-5.0.7/redis.conf &gt;&gt; /path/redis.log 2&gt;&amp;1 &amp;</span><br><span class="line">sudo ln -s /path/redis-5.0.7/src/redis-cli /bin/</span><br><span class="line">sudo ln -s /path/redis-5.0.7/src/redis-server /bin/</span><br></pre></td></tr></table></figure>
+
+<p>验证：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">redis-cli</span><br></pre></td></tr></table></figure>
+
+<p>关闭redis，在cli中输入:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">shutdown [SAVE|NOSAVE]</span><br></pre></td></tr></table></figure>
+
+<br>
+
+<p>待Redis安装之后，修改配置。查看配置：</p>
+<p>Redis的配置文件位于Redis安装目录下，文件名为<code>redis.conf</code>，例如我的文件位置为：<code>/path/redis-5.0.7/redis.conf</code></p>
+<table>
+<thead>
+<tr>
+<th>redis.conf参数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>daemonize no</td>
+<td>Redis默认不是以守护进程的方式运行，可通过将no-&gt;yes，启动守护进程</td>
+</tr>
+<tr>
+<td>pidfile /var/run/redis.pid</td>
+<td>当redis以守护进程运行时，会把它进程的pid写入此文件里</td>
+</tr>
+<tr>
+<td>port 6379</td>
+<td>指定Redis监听端口，默认6379</td>
+</tr>
+<tr>
+<td>bind 127.0.0.1</td>
+<td>绑定的主机IP，127.0.0.1代表只允许本机连接，0.0.0.0代表允许其他主机连接</td>
+</tr>
+<tr>
+<td>timeout 300</td>
+<td>当客户端闲置300s后关闭连接，0为关闭此功能</td>
+</tr>
+<tr>
+<td>loglevel notice</td>
+<td>指定日志级别，共有四个：debug、verbose、notice、warning</td>
+</tr>
+<tr>
+<td>logfile  “”</td>
+<td>指定日志文件名，默认为标准输出，如果为守护进程运行，而日志记录为标准输出，则日志会发送给/dev/null</td>
+</tr>
+<tr>
+<td>databases 16</td>
+<td>设置数据库的数量，默认数据库为0，可以使用SELECT &lt;dbid&gt;来再连接上指定数据库</td>
+</tr>
+<tr>
+<td>save &lt;seconds&gt; &lt;changes&gt;</td>
+<td>指定在多长时间内，有多少次更新操作，就将数据同步到数据文件，可以多个条件配合<br>Redis默认配置文件中提供了三个条件：<br>     save 900 1<br>     save 300 10<br>     sabe 60 10000<br>分别代表900秒(15min)内有一个更改，300秒(5min)内有10个更改以及60秒内有10000个更改。</td>
+</tr>
+<tr>
+<td>rdbcompression yes</td>
+<td>指定存储至本地数据库时是否压缩数据，默认为yes。采用LZF压缩。</td>
+</tr>
+<tr>
+<td>dbfilename dump.rdb</td>
+<td>本地数据库文件名，默认为dump.rdb</td>
+</tr>
+<tr>
+<td>dir ./</td>
+<td>指定本地数据库存放目录，请注意，必须在此处指定目录，而不是文件名。</td>
+</tr>
+<tr>
+<td>appendonly no</td>
+<td>指定是否在每次更新操作后进行日志记录，Redis在默认情况下是异步的把数据写入磁盘，如果不开启，可能会在断电时导致一段时间内的数据丢失。因为redis本身同步数据文件是按照上面的save来同步的，所以可能有些数据在一段时间里只存在于内存</td>
+</tr>
+<tr>
+<td>appendfilename “appendonly.aof”</td>
+<td>指定更新文件名</td>
+</tr>
+<tr>
+<td>appendfsync everysec</td>
+<td>指定更新日志条件，3个可选值：<br>    no: 表示操作系统进行数据缓存同步到磁盘(快)<br>    alway: 表示每次更新操作后手动调用fsync()将数据写到磁盘(慢，安全)<br>    everysec:  每秒同步一次(默认值)</td>
+</tr>
+</tbody></table>
+<p>当修改<code>daemonize yes</code>后，启动redis的命令不用像上述一样麻烦，直接<code>sudo /path/redis-5.0.7/src/redis-server /path/redis-5.0.7/redis.conf</code></p>
+<p>日志级别：</p>
+<p>　　1）debug：会打印出很多信息，适用于开发和测试阶段</p>
+<p>　　2）verbose（冗长的）：包含很多不太有用的信息，但比debug要清晰一些</p>
+<p>　　3）notice：适用于生产模式</p>
+<p>　　4）warning : 警告信息</p>
+<h1 id="Redis的数据类型和使用"><a href="#Redis的数据类型和使用" class="headerlink" title="Redis的数据类型和使用"></a>Redis的数据类型和使用</h1><p>上面提到过，redis支持的五种数据类型：</p>
+<ol>
+<li>string</li>
+<li>list</li>
+<li>hash</li>
+<li>set</li>
+<li>sorted set(zset)</li>
+</ol>
+<h2 id="Redis的key-value"><a href="#Redis的key-value" class="headerlink" title="Redis的key-value"></a>Redis的key-value</h2><p>key的值是二进制安全的</p>
+<p>通常我们设置键值时，要遵守：</p>
+<ol>
+<li>以业务名(或数据库名)为前缀(防止key冲突)，用冒号分隔，比如业务名:表名:id</li>
+<li>不要包含特殊字符，反例：包含空格、换行、单双引号以及其他转义字符</li>
+<li>保证语义的前提下，控制key的长度，当key较多时，内存占用也不容忽视<ul>
+<li><code>user:&#123;uid&#125;:friends:messages:&#123;mid&#125;简化为u:&#123;uid&#125;:fr:m:&#123;mid&#125;。</code></li>
+</ul>
+</li>
+</ol>
+<p>value设计：</p>
+<ol>
+<li>string类型控制在10KB以内，hash、list、set、zset元素个数不要超过5000。</li>
+<li>控制key的生命周期，redis不是垃圾桶。</li>
+</ol>
+<h2 id="Redis命令"><a href="#Redis命令" class="headerlink" title="Redis命令"></a>Redis命令</h2><p>命令语法：<code>COMMAND KEY_NAME</code></p>
+<h3 id="KEYS命令"><a href="#KEYS命令" class="headerlink" title="KEYS命令"></a>KEYS命令</h3><p>详细命令见表格：</p>
+<table>
+<thead>
+<tr>
+<th align="center">序号</th>
+<th>keys命令</th>
+<th align="left">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">1</td>
+<td>DEL　key</td>
+<td align="left">该命令用于在key存在时删除key</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td>DUMP key</td>
+<td align="left">序列化给定key，并返回被序列化的值</td>
+</tr>
+<tr>
+<td align="center">3</td>
+<td>EXISTS key</td>
+<td align="left">检查key是否存在</td>
+</tr>
+<tr>
+<td align="center">4</td>
+<td>EXPIRE key seconds</td>
+<td align="left">给key设置过期时间</td>
+</tr>
+<tr>
+<td align="center">5</td>
+<td>PEXPIREAT key milliseconds-timestamp</td>
+<td align="left">给key设置过期时间，毫秒时间戳</td>
+</tr>
+<tr>
+<td align="center">6</td>
+<td>PEXPIRE key milliseconds</td>
+<td align="left">给key设置过期时间，毫秒</td>
+</tr>
+<tr>
+<td align="center">7</td>
+<td>EXPIREAT key timestamp</td>
+<td align="left">给key设置过期时间，时间戳</td>
+</tr>
+<tr>
+<td align="center">8</td>
+<td>MOVE key db</td>
+<td align="left">将此key移动到指定db中</td>
+</tr>
+<tr>
+<td align="center">9</td>
+<td>PERSIST key</td>
+<td align="left">移除key的过期时间，key将持久保持</td>
+</tr>
+<tr>
+<td align="center">10</td>
+<td>RENAME key newkey</td>
+<td align="left">修改key值</td>
+</tr>
+<tr>
+<td align="center">11</td>
+<td>TYPE key</td>
+<td align="left">返回key存储值的类型</td>
+</tr>
+<tr>
+<td align="center">12</td>
+<td>keys *</td>
+<td align="left">查看所有key</td>
+</tr>
+</tbody></table>
+<h3 id="String命令"><a href="#String命令" class="headerlink" title="String命令"></a>String命令</h3><p>string是Redis最简单且最常用的数据类型之一。如果只使用这种数据类型，那么Redis就是一个加了持久化功能的memcached服务器。</p>
+<p>二者区别</p>
+<ol>
+<li>Memcached 所有的值均是简单的字符串，Redis 作为其替代者，支持更为丰富的数据类型</li>
+<li>Redis 的速度比 Memcached 快很多</li>
+<li>Redis 可以持久化其数据</li>
+</ol>
+<p>在Redis中，我们<code>set key value</code>，然后<code>get key</code>来获取字符串值，value可以是任何类型的字符串，最长不可超过1G，但规范中让我们在10k内。</p>
+<p>String类型也可以存储数字，并支持对数字的加减操作。</p>
+<table>
+<thead>
+<tr>
+<th>序号</th>
+<th>字符串命令</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>SET key value</td>
+<td>设置指定key的value</td>
+</tr>
+<tr>
+<td>2</td>
+<td>GET key</td>
+<td>获取指定key的值</td>
+</tr>
+<tr>
+<td>3</td>
+<td>MGET key1 [key2…]</td>
+<td>获取多个指定key的值</td>
+</tr>
+<tr>
+<td>4</td>
+<td>STRLEN key</td>
+<td>返回key存储字符串的长度</td>
+</tr>
+<tr>
+<td>5</td>
+<td>MSET key value [key value…]</td>
+<td>批量添加k-v对，如果存在已有key，则会覆盖之前的</td>
+</tr>
+<tr>
+<td>6</td>
+<td>MSETNX key value [key value…]</td>
+<td>批量添加k-v对，与上述不同的是，所有key都必须不存在<br>返回0失败，1成功</td>
+</tr>
+<tr>
+<td>7</td>
+<td>INCR key</td>
+<td>将key存储的数字值+1，如果不是数字会报错</td>
+</tr>
+<tr>
+<td>8</td>
+<td>INCRBY key increment</td>
+<td>将key所存储的值加上给定的增量increment，如果increment不是数字会报错</td>
+</tr>
+<tr>
+<td>9</td>
+<td>INCRBYFLOAT key increment</td>
+<td>将key所存储的值加上给定的浮点增量increment，如果increment不是数字会报错</td>
+</tr>
+<tr>
+<td>10</td>
+<td>DECR key</td>
+<td>将key值存储的数字值-1</td>
+</tr>
+<tr>
+<td>11</td>
+<td>DECRBY key decrement</td>
+<td>将key所存储的值减去给定的增量increment，如果increment不是数字会报错</td>
+</tr>
+<tr>
+<td>12</td>
+<td>APPEND key value</td>
+<td>如果key值已存在并且是一个string，此命令会追加值<br>如果已存在，则会创建该k-v</td>
+</tr>
+</tbody></table>
+<p><font color='red'>注意：批量操作mget、mset命令是原子性的，里面的批量操作要么都执行，要么都不执行</font></p>
+<p>下面来总结一下上面的数字操作：</p>
+<ol>
+<li><code>INCR key</code>、<code>DECR key</code>命令、<code>INCRBY key increment</code>、<code>DECRBY key decrement</code>操作的key的值只能是纯数字，<font color='red'>不能是小数！！！不能是小数！！！不能是小数！！！</font></li>
+<li><code>INCRBYFLOAT key increment</code>操作的key值对应的值可以是小数或者整数！！</li>
+</ol>
+<h3 id="Hash命令"><a href="#Hash命令" class="headerlink" title="Hash命令"></a>Hash命令</h3><p>Redis Hash是一个string类型的field和value的映射表，hash特别适合用于存储对象，能够存储key对多个属性的数据。</p>
+<p><img src="hash.PNG"></p>
+<table>
+<thead>
+<tr>
+<th>序号</th>
+<th>hash命令</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>HDEL key field1 [field2…]</td>
+<td>删除一个或多个哈希表字段</td>
+</tr>
+<tr>
+<td>2</td>
+<td>HEXISTS key field</td>
+<td>查看key存储的哈希表中是否有field属性</td>
+</tr>
+<tr>
+<td>3</td>
+<td>HGET key field</td>
+<td>获取存储在哈希表中指定字段的值</td>
+</tr>
+<tr>
+<td>4</td>
+<td>HGETALL key</td>
+<td>获取哈希表中指定key的所有字段和值</td>
+</tr>
+<tr>
+<td>5</td>
+<td>HKEYS key</td>
+<td>获取key中哈希表的所有field</td>
+</tr>
+<tr>
+<td>6</td>
+<td>HLEN key</td>
+<td>获取哈希表中字段的数量</td>
+</tr>
+<tr>
+<td>7</td>
+<td>HINCRBY key field increment</td>
+<td>为哈希表中field字段的值加increment</td>
+</tr>
+<tr>
+<td>8</td>
+<td>HINCRBYFLOAT key field increment</td>
+<td>为哈希表中field字段的值加increment浮点数</td>
+</tr>
+<tr>
+<td>9</td>
+<td>HSET key field1 value1</td>
+<td>将哈希表key中的字段field1设置为value1</td>
+</tr>
+<tr>
+<td>10</td>
+<td>HSETNX key field value</td>
+<td>只有field字段不在时，设置它的值</td>
+</tr>
+<tr>
+<td>11</td>
+<td>HVALS key</td>
+<td>获取哈希表中所有的value</td>
+</tr>
+<tr>
+<td>12</td>
+<td>HMGET key field1 [field2…]</td>
+<td>同上string</td>
+</tr>
+<tr>
+<td>13</td>
+<td>HMSET key  field1 value1 [f2 v2…]</td>
+<td>同上string</td>
+</tr>
+</tbody></table>
+<h3 id="List命令"><a href="#List命令" class="headerlink" title="List命令"></a>List命令</h3><p>列表是有序元素的序列。Redis Lists基于Linked List实现。这意味着在十个元素的列表中添加新元素和千万元素中添加新元素的速度相同。</p>
+<p>Redis列表是简单的字符串列表，按照插入顺序排序。可以添加一个元素到列表的头或尾。</p>
+<p><img src="list.PNG"></p>
+<table>
+<thead>
+<tr>
+<th>序号</th>
+<th>list命令</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>LINDEX key index</td>
+<td>通过索引获取列表中的元素</td>
+</tr>
+<tr>
+<td>2</td>
+<td>LLEN key</td>
+<td>获取列表长度</td>
+</tr>
+<tr>
+<td>3</td>
+<td>LPUSH key v1 [v2…]</td>
+<td>将一个值或多个插入到列表头部</td>
+</tr>
+<tr>
+<td>4</td>
+<td>LPUSHX key v1</td>
+<td>将一个值插入到已经存在的列表头部，列表不存在则不插入</td>
+</tr>
+<tr>
+<td>5</td>
+<td>LREM key count value</td>
+<td>移除列表元素</td>
+</tr>
+<tr>
+<td>6</td>
+<td>LRANGE key start end</td>
+<td>获取列表指定范围内的元素</td>
+</tr>
+<tr>
+<td>7</td>
+<td>LSET key index value</td>
+<td>通过索引设置列表元素的值</td>
+</tr>
+</tbody></table>
+<h3 id="set命令"><a href="#set命令" class="headerlink" title="set命令"></a>set命令</h3><p>set是string类型的无序集合。集合成员是唯一的，不会出现重复数据。</p>
+<p><img src="set.PNG"></p>
+<table>
+<thead>
+<tr>
+<th>序号</th>
+<th>set命令</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>SADD key member1 [member2…]</td>
+<td>向集合添加一个或多个成员</td>
+</tr>
+<tr>
+<td>2</td>
+<td>SMEMBERS key</td>
+<td>获取key的集合中的成员</td>
+</tr>
+<tr>
+<td>3</td>
+<td>SCARD key</td>
+<td>获取key的集合中的成员数</td>
+</tr>
+</tbody></table>
+<h3 id="zset命令"><a href="#zset命令" class="headerlink" title="zset命令"></a>zset命令</h3><p>zset与set不同的是它每个元素会关联一个double类型的分数，redis通过分数来为集合中的成员进行从小到大的排序。</p>
+<p><img src="zset.PNG"></p>
+<table>
+<thead>
+<tr>
+<th>序号</th>
+<th>zset命令</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>ZADD key score1 member1 [s2 m2… ]</td>
+<td>添加一个或多个成员，或更新已存在成员的分数</td>
+</tr>
+<tr>
+<td>2</td>
+<td>ZCOUNT key min max</td>
+<td>计算有序集合中指定区间分数的成员数</td>
+</tr>
+<tr>
+<td>3</td>
+<td>ZCARD key</td>
+<td>获取有序集合的成员数</td>
+</tr>
+<tr>
+<td>4</td>
+<td>ZRANGE key start stop</td>
+<td>通过索引区间返回有序集合指定区域的成员</td>
+</tr>
+<tr>
+<td>5</td>
+<td>ZSCORE key member</td>
+<td>返回此成员的分数</td>
+</tr>
+</tbody></table>
+<p><strong>总结</strong></p>
+<p>以<code>NX</code>结尾的命令添加值时，必须不存在，也就是说这个命令不会覆盖已有内容</p>
+<h1 id="Redis集群策略"><a href="#Redis集群策略" class="headerlink" title="Redis集群策略"></a>Redis集群策略</h1><p>Redis有三种集群策略</p>
+<ol>
+<li>主从</li>
+<li>哨兵</li>
+<li>主从组成的集群</li>
+</ol>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">Xiangjie</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://awslzhang.top/2019/12/11/Redis%E5%85%A5%E9%97%A8%E5%88%B0%E5%AE%9E%E8%B7%B5/">https://awslzhang.top/2019/12/11/Redis%E5%85%A5%E9%97%A8%E5%88%B0%E5%AE%9E%E8%B7%B5/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://awslzhang.top" target="_blank">zxj</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"></div><div class="post_share"><div class="social-share" data-image="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2019/12/12/springboot%E7%AE%80%E5%8D%95%E4%BD%BF%E7%94%A8redis/"><img class="prev-cover" src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">springboot简单使用redis</div></div></a></div><div class="next-post pull-right"><a href="/2019/12/10/%E8%AE%B0%E4%B8%80%E6%AC%A1postgres%E6%95%B0%E6%8D%AE%E5%BA%93like%E4%BC%98%E5%8C%96/"><img class="next-cover" src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">记一次postgres数据库like优化</div></div></a></div></nav></div><div class="aside_content" id="aside_content"><div class="card-widget card-info"><div class="card-content"><div class="card-info-avatar is-center"><img class="avatar-img" src="/null" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">Xiangjie</div><div class="author-info__description"></div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">83</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">43</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">分类</div><div class="length-num">25</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/XiangJie-Zhang" target="_blank" title="Github"><i class="fab fa-github"></i></a><a class="social-icon" href="mailto:qluzxj@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a></div></div></div><div class="card-widget card-announcement"><div class="card-content"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Redis%E7%AE%80%E4%BB%8B"><span class="toc-number">1.</span> <span class="toc-text">Redis简介</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Redis%E5%AE%89%E8%A3%85%E5%92%8C%E9%85%8D%E7%BD%AE"><span class="toc-number">2.</span> <span class="toc-text">Redis安装和配置</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Redis%E7%9A%84%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E5%92%8C%E4%BD%BF%E7%94%A8"><span class="toc-number">3.</span> <span class="toc-text">Redis的数据类型和使用</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Redis%E7%9A%84key-value"><span class="toc-number">3.1.</span> <span class="toc-text">Redis的key-value</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Redis%E5%91%BD%E4%BB%A4"><span class="toc-number">3.2.</span> <span class="toc-text">Redis命令</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#KEYS%E5%91%BD%E4%BB%A4"><span class="toc-number">3.2.1.</span> <span class="toc-text">KEYS命令</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#String%E5%91%BD%E4%BB%A4"><span class="toc-number">3.2.2.</span> <span class="toc-text">String命令</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Hash%E5%91%BD%E4%BB%A4"><span class="toc-number">3.2.3.</span> <span class="toc-text">Hash命令</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#List%E5%91%BD%E4%BB%A4"><span class="toc-number">3.2.4.</span> <span class="toc-text">List命令</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#set%E5%91%BD%E4%BB%A4"><span class="toc-number">3.2.5.</span> <span class="toc-text">set命令</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#zset%E5%91%BD%E4%BB%A4"><span class="toc-number">3.2.6.</span> <span class="toc-text">zset命令</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Redis%E9%9B%86%E7%BE%A4%E7%AD%96%E7%95%A5"><span class="toc-number">4.</span> <span class="toc-text">Redis集群策略</span></a></li></ol></div></div></div><div class="card-widget card-recent-post"><div class="card-content"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink的时间语义和watermark"/></a><div class="content"><a class="title" href="/2020/12/23/Flink%E6%97%B6%E9%97%B4%E8%AF%AD%E4%B9%89%E5%92%8CWaterMark/" title="Flink的时间语义和watermark">Flink的时间语义和watermark</a><time datetime="2020-12-23T10:59:07.000Z" title="发表于 2020-12-23 18:59:07">2020-12-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/Flink-API/" title="Flink Api学习"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink Api学习"/></a><div class="content"><a class="title" href="/2020/12/17/Flink-API/" title="Flink Api学习">Flink Api学习</a><time datetime="2020-12-17T12:36:28.000Z" title="发表于 2020-12-17 20:36:28">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/17/ready/" title="ready!"><img src="https://images.pexels.com/photos/924824/pexels-photo-924824.jpeg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="ready!"/></a><div class="content"><a class="title" href="/2020/12/17/ready/" title="ready!">ready!</a><time datetime="2020-12-16T16:02:06.000Z" title="发表于 2020-12-17 00:02:06">2020-12-17</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记"><img src="https://flink.apache.org/img/flink-header-logo.svg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Flink学习笔记"/></a><div class="content"><a class="title" href="/2020/12/16/Flink%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="Flink学习笔记">Flink学习笔记</a><time datetime="2020-12-16T12:29:56.000Z" title="发表于 2020-12-16 20:29:56">2020-12-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目"><img src="https://zxj-typora.oss-cn-shanghai.aliyuncs.com/img/下载.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="k8s集群监控、高可用以及部署自建Java项目"/></a><div class="content"><a class="title" href="/2020/12/06/k8s%E9%9B%86%E7%BE%A4%E7%9B%91%E6%8E%A7%E3%80%81%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BB%A5%E5%8F%8A%E9%83%A8%E7%BD%B2%E8%87%AA%E5%BB%BAJava%E9%A1%B9%E7%9B%AE/" title="k8s集群监控、高可用以及部署自建Java项目">k8s集群监控、高可用以及部署自建Java项目</a><time datetime="2020-12-06T01:26:41.000Z" title="发表于 2020-12-06 09:26:41">2020-12-06</time></div></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By Xiangjie</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/node-snackbar/dist/snackbar.min.js"></script><script src="/js/search/local-search.js"></script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><canvas class="fireworks" mobile="false"></canvas><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/fireworks.min.js"></script><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script></div></body></html>
