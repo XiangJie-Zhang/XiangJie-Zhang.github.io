@@ -506,14 +506,14 @@
   </url>
   
   <url>
-    <loc>https://awslzhang.top/2020/04/17/Java-Spring%E5%B8%B8%E7%94%A8%E6%B3%A8%E8%A7%A3/</loc>
+    <loc>https://awslzhang.top/2019/12/06/Java%E7%BA%BF%E7%A8%8B%E6%B1%A0/</loc>
     
     <lastmod>2021-01-01</lastmod>
     
   </url>
   
   <url>
-    <loc>https://awslzhang.top/2019/12/06/Java%E7%BA%BF%E7%A8%8B%E6%B1%A0/</loc>
+    <loc>https://awslzhang.top/2020/04/17/Java-Spring%E5%B8%B8%E7%94%A8%E6%B3%A8%E8%A7%A3/</loc>
     
     <lastmod>2021-01-01</lastmod>
     
@@ -676,13 +676,6 @@
   </url>
   
   <url>
-    <loc>https://awslzhang.top/tags/Spring/</loc>
-    <lastmod>2021-02-02</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
     <loc>https://awslzhang.top/tags/%E7%BA%BF%E7%A8%8B%E6%B1%A0/</loc>
     <lastmod>2021-02-02</lastmod>
     <changefreq>daily</changefreq>
@@ -726,6 +719,13 @@
   
   <url>
     <loc>https://awslzhang.top/tags/Hadoop/</loc>
+    <lastmod>2021-02-02</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
+    <loc>https://awslzhang.top/tags/Spring/</loc>
     <lastmod>2021-02-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
@@ -809,6 +809,13 @@
   </url>
   
   <url>
+    <loc>https://awslzhang.top/tags/frp/</loc>
+    <lastmod>2021-02-02</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <url>
     <loc>https://awslzhang.top/tags/oracle/</loc>
     <lastmod>2021-02-02</lastmod>
     <changefreq>daily</changefreq>
@@ -817,13 +824,6 @@
   
   <url>
     <loc>https://awslzhang.top/tags/PostgreSQL/</loc>
-    <lastmod>2021-02-02</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <url>
-    <loc>https://awslzhang.top/tags/frp/</loc>
     <lastmod>2021-02-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
@@ -1042,14 +1042,14 @@
   </url>
   
   <url>
-    <loc>https://awslzhang.top/categories/SQL/</loc>
+    <loc>https://awslzhang.top/categories/%E7%BD%91%E7%BB%9C/</loc>
     <lastmod>2021-02-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
-    <loc>https://awslzhang.top/categories/%E7%BD%91%E7%BB%9C/</loc>
+    <loc>https://awslzhang.top/categories/SQL/</loc>
     <lastmod>2021-02-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
